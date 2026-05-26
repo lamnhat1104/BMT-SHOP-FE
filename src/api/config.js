@@ -1,0 +1,52 @@
+export const BASE_URL = 'http://localhost:8080/api';
+
+/**
+ * Generic fetch wrapper to handle JSON parsing and errors uniformly.
+ */
+export async function fetchData(endpoint, options = {}) {
+  const url = `${BASE_URL}${endpoint}`;
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const fetchOptions = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  };
+
+  try {
+    const response = await fetch(url, fetchOptions);
+    
+    // Attempt to parse JSON response, fallback to text if not JSON
+    let data;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('fullName');
+        localStorage.removeItem('role');
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+      throw new Error(data.message || data || 'Có lỗi xảy ra');
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Error fetching ${endpoint}:`, error);
+    throw error;
+  }
+}

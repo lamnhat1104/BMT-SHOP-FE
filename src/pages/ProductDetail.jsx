@@ -1,16 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { productApi } from '../api/product';
+import { cartApi } from '../api/cart';
 
 function ProductDetail() {
   const { id } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [qty, setQty] = useState(1);
 
-  // Mock data based on ID, in reality you'd fetch this
-  const isShoe = id === '2' || id === '4' || id === '6' || id === '8';
-  const name = isShoe ? 'Giày Cầu Lông Cao Cấp' : 'Vợt Cầu Lông Chuyên Nghiệp';
-  const img = isShoe ? '/shoe_product_1.png' : '/racket_product_1.png';
-  const price = isShoe ? '1.250.000₫' : '3.450.000₫';
-  const brand = isShoe ? 'LINING' : 'YONEX';
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const data = await productApi.getProductById(id);
+        setProduct(data);
+      } catch (err) {
+        setError(err.message || 'Lỗi tải chi tiết sản phẩm');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
+  const formatPrice = (price) => {
+    if (!price) return '0₫';
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    const token = localStorage.getItem('token');
+    const details = isShoe ? 'Size: 42' : '3U/G5';
+    
+    if (token) {
+      try {
+        await cartApi.addCartItem(product.id, qty, details);
+        window.dispatchEvent(new Event('cartUpdated'));
+        alert(`Đã thêm ${qty} sản phẩm "${product.name}" vào giỏ hàng!`);
+      } catch (err) {
+        alert(err.message || 'Lỗi thêm sản phẩm vào giỏ hàng');
+      }
+    } else {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const existing = cart.find(item => item.id === product.id);
+      
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          thumbnail: product.imageUrl || product.thumbnail || '/racket_product_1.png',
+          brand: brand,
+          quantity: qty,
+          details: details
+        });
+      }
+      
+      localStorage.setItem('cart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert(`Đã thêm ${qty} sản phẩm "${product.name}" vào giỏ hàng tạm!`);
+    }
+  };
+
+  if (loading) {
+    return <div className="container" style={{ padding: '40px 20px', textAlign: 'center' }}>Đang tải thông tin sản phẩm...</div>;
+  }
+
+  if (error || !product) {
+    return <div className="container" style={{ padding: '40px 20px', textAlign: 'center', color: 'red' }}>{error || 'Sản phẩm không tồn tại'}</div>;
+  }
+
+  const name = product.name;
+  const img = product.imageUrl || product.thumbnail || '/racket_product_1.png';
+  const price = product.price;
+  const brand = product.brand ? product.brand.name : 'Unknown';
+  
+  // Logic tạm thời để phân biệt giày / vợt dựa vào category (nếu có)
+  const isShoe = product.category && product.category.name && product.category.name.toLowerCase().includes('giày');
 
   return (
     <div className="container fade-in" style={{ padding: '40px 20px' }}>
@@ -36,15 +107,15 @@ function ProductDetail() {
         {/* Product Info */}
         <div className="product-info" style={{ flex: 1 }}>
           <div className="product-brand" style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: '1rem', marginBottom: '10px' }}>{brand}</div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '20px', lineHeight: 1.3 }}>{name} - Phiên Bản Giới Hạn</h1>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '20px', lineHeight: 1.3 }}>{name}</h1>
           
           <div className="product-rating" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <span style={{ color: '#ffb800' }}>★★★★★</span>
-            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>(124 đánh giá) | Đã bán 450+</span>
+            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>(0 đánh giá) | Đã bán 0</span>
           </div>
 
           <div className="product-price" style={{ fontSize: '2rem', fontWeight: 700, color: '#ff3b30', marginBottom: '30px' }}>
-            {price} <span style={{ fontSize: '1.2rem', color: 'var(--text-light)', textDecoration: 'line-through', fontWeight: 400, marginLeft: '15px' }}>4.000.000₫</span>
+            {formatPrice(price)} 
           </div>
 
           <div className="product-options" style={{ marginBottom: '30px' }}>
@@ -75,7 +146,7 @@ function ProductDetail() {
               <button onClick={() => setQty(qty + 1)} style={{ padding: '10px 15px', backgroundColor: '#f5f5f5', borderLeft: '1px solid var(--border-color)' }}>+</button>
             </div>
             
-            <button className="btn-primary" style={{ flex: 1, padding: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', fontSize: '1.1rem' }}>
+            <button onClick={handleAddToCart} className="btn-primary" style={{ flex: 1, padding: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', fontSize: '1.1rem' }}>
               <span>🛒</span> THÊM VÀO GIỎ HÀNG
             </button>
           </div>
@@ -93,18 +164,10 @@ function ProductDetail() {
         <div className="tab-headers" style={{ display: 'flex', gap: '30px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '30px' }}>
           <h3 style={{ color: 'var(--primary-color)', borderBottom: '3px solid var(--primary-color)', paddingBottom: '15px', marginBottom: '-16px', cursor: 'pointer' }}>Mô Tả Sản Phẩm</h3>
           <h3 style={{ color: 'var(--text-light)', cursor: 'pointer' }}>Thông Số Kỹ Thuật</h3>
-          <h3 style={{ color: 'var(--text-light)', cursor: 'pointer' }}>Đánh Giá (124)</h3>
+          <h3 style={{ color: 'var(--text-light)', cursor: 'pointer' }}>Đánh Giá (0)</h3>
         </div>
         <div className="tab-content" style={{ lineHeight: 1.8 }}>
-          <p>Sản phẩm này là một trong những siêu phẩm được mong đợi nhất trong năm nay. Với thiết kế tinh tế, kết hợp cùng công nghệ tiên tiến nhất, sản phẩm mang lại trải nghiệm tuyệt vời cho người sử dụng.</p>
-          <p>Đặc biệt, với phối màu hiện đại và sang trọng, bạn không chỉ tỏa sáng trên sân mà còn khẳng định phong cách chuyên nghiệp của mình.</p>
-          <img src={img} alt="Detail" style={{ width: '100%', maxWidth: '600px', display: 'block', margin: '30px auto', borderRadius: '12px' }} />
-          <h4>Công Nghệ Nổi Bật:</h4>
-          <ul>
-            <li><strong>Công nghệ A:</strong> Giúp tăng cường sức mạnh và độ bền.</li>
-            <li><strong>Chất liệu B:</strong> Siêu nhẹ, siêu đàn hồi.</li>
-            <li><strong>Thiết kế C:</strong> Khí động học, giảm sức cản không khí.</li>
-          </ul>
+          <p>{product.description || 'Chưa có mô tả cho sản phẩm này.'}</p>
         </div>
       </div>
     </div>

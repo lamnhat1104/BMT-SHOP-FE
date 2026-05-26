@@ -1,7 +1,23 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Account() {
+  const navigate = useNavigate();
+  const fullName = localStorage.getItem('fullName') || 'Khách hàng';
+  const emailOrPhone = localStorage.getItem('emailOrPhone') || '';
+  const initial = fullName.charAt(0).toUpperCase();
+
+  const handleLogout = (e) => {
+    e.preventDefault();
+    localStorage.removeItem('token');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('role');
+    localStorage.removeItem('emailOrPhone');
+    localStorage.removeItem('cart');
+    window.dispatchEvent(new Event('cartUpdated'));
+    navigate('/');
+  };
+
   return (
     <div className="container fade-in" style={{ padding: '40px 20px' }}>
       <div className="breadcrumb">
@@ -13,9 +29,11 @@ function Account() {
         <div style={{ width: '250px', flexShrink: 0 }}>
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)' }}>
-              <div style={{ width: '50px', height: '50px', backgroundColor: 'var(--primary-color)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>N</div>
+              <div style={{ width: '50px', height: '50px', backgroundColor: 'var(--primary-color)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                {initial}
+              </div>
               <div>
-                <h4 style={{ margin: 0 }}>Nguyễn Văn A</h4>
+                <h4 style={{ margin: 0 }}>{fullName}</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: 0 }}>Thành viên Vàng</p>
               </div>
             </div>
@@ -25,7 +43,7 @@ function Account() {
               <li style={{ marginBottom: '10px' }}><a href="#" style={{ display: 'block', padding: '10px', color: 'var(--text-dark)', transition: '0.3s' }}>Quản lý đơn hàng</a></li>
               <li style={{ marginBottom: '10px' }}><a href="#" style={{ display: 'block', padding: '10px', color: 'var(--text-dark)', transition: '0.3s' }}>Địa chỉ giao hàng</a></li>
               <li style={{ marginBottom: '10px' }}><Link to="/wishlist" style={{ display: 'block', padding: '10px', color: 'var(--text-dark)', transition: '0.3s' }}>Sản phẩm yêu thích</Link></li>
-              <li><Link to="/login" style={{ display: 'block', padding: '10px', color: '#ff3b30', transition: '0.3s' }}>Đăng xuất</Link></li>
+              <li><a href="#" onClick={handleLogout} style={{ display: 'block', padding: '10px', color: '#ff3b30', transition: '0.3s' }}>Đăng xuất</a></li>
             </ul>
           </div>
         </div>
@@ -38,17 +56,17 @@ function Account() {
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Họ và tên</label>
-                <input type="text" defaultValue="Nguyễn Văn A" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
+                <input type="text" defaultValue={fullName} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Số điện thoại</label>
-                <input type="tel" defaultValue="0901234567" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
+                <input type="tel" defaultValue={emailOrPhone.includes('@') ? '' : emailOrPhone} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
               </div>
             </div>
             
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Email</label>
-              <input type="email" defaultValue="nguyenvana@example.com" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
+              <input type="email" defaultValue={emailOrPhone.includes('@') ? emailOrPhone : ''} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }} />
             </div>
 
             <div style={{ marginBottom: '30px' }}>
