@@ -2,6 +2,78 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 function Home() {
+  const hotProducts = [
+    {
+      id: 1,
+      name: "Vợt Cầu Lông Yonex Astrox 99 Pro (White Tiger)",
+      price: 3450000,
+      oldPrice: "4.000.000₫",
+      thumbnail: "/racket_product_1.png",
+      brand: "YONEX",
+      tag: "-15%",
+      details: "3U/G5"
+    },
+    {
+      id: 2,
+      name: "Giày Cầu Lông Lining Halberd III Lite Trắng Cam",
+      price: 1250000,
+      thumbnail: "/shoe_product_1.png",
+      brand: "LINING",
+      tag: null,
+      details: "Size: 42"
+    },
+    {
+      id: 3,
+      name: "Vợt Cầu Lông Victor Thruster Ryuga II (Mã JP)",
+      price: 3100000,
+      thumbnail: "/racket_product_1.png",
+      brand: "VICTOR",
+      tag: "HOT",
+      details: "3U/G5",
+      style: { filter: 'hue-rotate(45deg)' }
+    },
+    {
+      id: 4,
+      name: "Giày Cầu Lông Yonex Power Cushion 65Z3 Men",
+      price: 2850000,
+      thumbnail: "/shoe_product_1.png",
+      brand: "YONEX",
+      tag: null,
+      details: "Size: 42",
+      style: { filter: 'hue-rotate(-45deg)' }
+    }
+  ];
+
+  const handleAddToCart = (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existing = cart.find(item => item.id === product.id);
+    
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        thumbnail: product.thumbnail,
+        brand: product.brand,
+        quantity: 1,
+        details: product.details
+      });
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
+    alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
   return (
     <>
       {/* HERO BANNER */}
@@ -56,52 +128,19 @@ function Home() {
           <Link to="/products" className="view-all">Xem tất cả ›</Link>
         </div>
         <div className="product-grid">
-          {/* Product 1 */}
-          <Link to="/products/1" className="product-card" style={{ display: 'block', color: 'inherit' }}>
-            <div className="product-badge">-15%</div>
-            <img src="/racket_product_1.png" alt="Vợt Yonex" className="product-image" />
-            <div className="product-brand">YONEX</div>
-            <h3 className="product-title">Vợt Cầu Lông Yonex Astrox 99 Pro (White Tiger)</h3>
-            <div className="product-price">
-              <span className="price-current">3.450.000₫</span>
-              <span className="price-old">4.000.000₫</span>
-            </div>
-            <button className="btn-add-to-cart">Thêm vào giỏ</button>
-          </Link>
-          
-          {/* Product 2 */}
-          <Link to="/products/2" className="product-card" style={{ display: 'block', color: 'inherit' }}>
-            <img src="/shoe_product_1.png" alt="Giày Lining" className="product-image" />
-            <div className="product-brand">LINING</div>
-            <h3 className="product-title">Giày Cầu Lông Lining Halberd III Lite Trắng Cam</h3>
-            <div className="product-price">
-              <span className="price-current">1.250.000₫</span>
-            </div>
-            <button className="btn-add-to-cart">Thêm vào giỏ</button>
-          </Link>
-
-          {/* Product 3 */}
-          <Link to="/products/3" className="product-card" style={{ display: 'block', color: 'inherit' }}>
-            <div className="product-badge">HOT</div>
-            <img src="/racket_product_1.png" alt="Vợt Victor" className="product-image" style={{ filter: 'hue-rotate(45deg)' }} />
-            <div className="product-brand">VICTOR</div>
-            <h3 className="product-title">Vợt Cầu Lông Victor Thruster Ryuga II (Mã JP)</h3>
-            <div className="product-price">
-              <span className="price-current">3.100.000₫</span>
-            </div>
-            <button className="btn-add-to-cart">Thêm vào giỏ</button>
-          </Link>
-
-          {/* Product 4 */}
-          <Link to="/products/4" className="product-card" style={{ display: 'block', color: 'inherit' }}>
-            <img src="/shoe_product_1.png" alt="Giày Yonex" className="product-image" style={{ filter: 'hue-rotate(-45deg)' }} />
-            <div className="product-brand">YONEX</div>
-            <h3 className="product-title">Giày Cầu Lông Yonex Power Cushion 65Z3 Men</h3>
-            <div className="product-price">
-              <span className="price-current">2.850.000₫</span>
-            </div>
-            <button className="btn-add-to-cart">Thêm vào giỏ</button>
-          </Link>
+          {hotProducts.map(p => (
+            <Link to={`/products/${p.id}`} key={p.id} className="product-card" style={{ display: 'block', color: 'inherit' }}>
+              {p.tag && <div className="product-badge" style={{ backgroundColor: p.tag.includes('%') ? '#ff3b30' : '#ffb800' }}>{p.tag}</div>}
+              <img src={p.thumbnail} alt={p.name} className="product-image" style={p.style} />
+              <div className="product-brand">{p.brand}</div>
+              <h3 className="product-title">{p.name}</h3>
+              <div className="product-price">
+                <span className="price-current">{formatPrice(p.price)}</span>
+                {p.oldPrice && <span className="price-old">{p.oldPrice}</span>}
+              </div>
+              <button onClick={(e) => handleAddToCart(e, p)} className="btn-add-to-cart">Thêm vào giỏ</button>
+            </Link>
+          ))}
         </div>
       </section>
     </>

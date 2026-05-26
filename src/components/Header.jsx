@@ -1,11 +1,116 @@
-import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Headphones, MapPin, Search, Binoculars, User, ShoppingCart, ChevronDown } from 'lucide-react';
+import { cartApi } from '../api/cart';
 
 function Header() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState({ token: null, fullName: '' });
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    // 1. Xử lý các tham số query do Backend redirect về sau khi login OAuth2 (Social) thành công
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get('token');
+    const fullNameParam = params.get('fullName');
+    const roleParam = params.get('role');
+
+    if (tokenParam) {
+      localStorage.setItem('token', tokenParam);
+      if (fullNameParam) {
+        localStorage.setItem('fullName', decodeURIComponent(fullNameParam));
+      }
+      if (roleParam) {
+        localStorage.setItem('role', roleParam);
+      }
+      
+      // Xóa các tham số query khỏi URL để URL sạch đẹp mà không cần reload trang
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // 2. Đọc thông tin đăng nhập từ localStorage để đồng bộ UI
+    const token = localStorage.getItem('token');
+    const fullName = localStorage.getItem('fullName') || '';
+    setUser({ token, fullName });
+
+    // 3. Đọc và đồng bộ số lượng giỏ hàng
+    const updateCartCount = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const cart = await cartApi.getCart();
+          const items = Array.isArray(cart) ? cart : [];
+          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          setCartCount(total);
+        } catch (err) {
+          console.error('Lỗi lấy số lượng giỏ hàng:', err);
+          setCartCount(0);
+        }
+      } else {
+        try {
+          const localCart = localStorage.getItem('cart');
+          const cart = localCart ? JSON.parse(localCart) : [];
+          const items = Array.isArray(cart) ? cart : [];
+          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          setCartCount(total);
+        } catch (err) {
+          console.error('Lỗi phân tích giỏ hàng local:', err);
+          setCartCount(0);
+        }
+      }
+    };
+
+    updateCartCount();
+    window.addEventListener('cartUpdated', updateCartCount);
+    window.addEventListener('storage', updateCartCount);
+
+    return () => {
+      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener('storage', updateCartCount);
+    };
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('role');
+    localStorage.removeItem('emailOrPhone');
+    localStorage.removeItem('cart');
+    window.dispatchEvent(new Event('cartUpdated'));
+    setUser({ token: null, fullName: '' });
+    navigate('/');
+  };
+
   return (
     <>
       <header className="header">
+        {/* TOP HEADER */}
+        <div className="top-header">
+          <div className="container">
+            <div className="top-header-left">
+              Chào mừng bạn đến với VNB Badminton Shop!
+            </div>
+            <div className="top-header-right">
+              {user.token ? (
+                <>
+                  <span>Xin chào, <strong style={{ color: 'var(--primary-color)' }}>{user.fullName || 'Khách hàng'}</strong></span>
+                  <span className="separator">|</span>
+                  <Link to="/account">Tài khoản</Link>
+                  <span className="separator">|</span>
+                  <button onClick={handleLogout} className="logout-btn">Đăng xuất</button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">Đăng nhập</Link>
+                  <span className="separator">|</span>
+                  <Link to="/register">Đăng ký</Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="main-header">
           <div className="container">
             {/* Left section: Logo & Info */}
@@ -42,16 +147,41 @@ function Header() {
                 </div>
                 <span>TRA CỨU</span>
               </Link>
-              <Link to="/account" className="action-item">
-                <div className="action-icon-wrapper">
-                  <User size={20} />
+              
+              {/* Dynamic User Menu & Dropdown */}
+              <div className="action-item user-action-container">
+                <Link to="/account" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className="action-icon-wrapper">
+                    <User size={20} />
+                  </div>
+                  <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.token ? (user.fullName ? user.fullName.split(' ').pop().toUpperCase() : 'TÀI KHOẢN') : 'TÀI KHOẢN'}
+                  </span>
+                </Link>
+                
+                {/* Dropdown Menu */}
+                <div className="user-dropdown">
+                  {user.token ? (
+                    <>
+                      <Link to="/account">Thông tin tài khoản</Link>
+                      <Link to="/order-tracking">Tra cứu đơn hàng</Link>
+                      <Link to="/wishlist">Sản phẩm yêu thích</Link>
+                      <button onClick={handleLogout} className="dropdown-logout-btn">Đăng xuất</button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login">Đăng nhập</Link>
+                      <Link to="/register">Đăng ký</Link>
+                      <Link to="/order-tracking">Tra cứu đơn hàng</Link>
+                    </>
+                  )}
                 </div>
-                <span>TÀI KHOẢN</span>
-              </Link>
+              </div>
+
               <Link to="/cart" className="action-item">
                 <div className="action-icon-wrapper">
                   <ShoppingCart size={20} />
-                  <div className="badge">0</div>
+                  <div className="badge">{cartCount}</div>
                 </div>
                 <span>GIỎ HÀNG</span>
               </Link>
