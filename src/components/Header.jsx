@@ -25,6 +25,23 @@ function Header() {
         localStorage.setItem('role', roleParam);
       }
       
+      // Đồng bộ giỏ hàng localStorage lên Database sau khi đăng nhập Social thành công
+      const syncLocalCart = async () => {
+        const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
+        if (localCart.length > 0) {
+          try {
+            for (const item of localCart) {
+              await cartApi.addCartItem(item.id, item.quantity, item.details || '');
+            }
+            localStorage.removeItem('cart');
+            window.dispatchEvent(new Event('cartUpdated'));
+          } catch (err) {
+            console.error('Lỗi đồng bộ giỏ hàng Social:', err);
+          }
+        }
+      };
+      syncLocalCart();
+      
       // Xóa các tham số query khỏi URL để URL sạch đẹp mà không cần reload trang
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -61,13 +78,21 @@ function Header() {
       }
     };
 
+    const updateUserInfo = () => {
+      const token = localStorage.getItem('token');
+      const fullName = localStorage.getItem('fullName') || '';
+      setUser({ token, fullName });
+    };
+
     updateCartCount();
     window.addEventListener('cartUpdated', updateCartCount);
     window.addEventListener('storage', updateCartCount);
+    window.addEventListener('profileUpdated', updateUserInfo);
 
     return () => {
       window.removeEventListener('cartUpdated', updateCartCount);
       window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('profileUpdated', updateUserInfo);
     };
   }, [location]);
 
