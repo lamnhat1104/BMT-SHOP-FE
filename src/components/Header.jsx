@@ -188,6 +188,9 @@ function Header() {
                 <div className="user-dropdown">
                   {user.token ? (
                     <>
+                      {localStorage.getItem('role') === 'admin' && (
+                        <Link to="/admin/orders" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Quản trị đơn hàng</Link>
+                      )}
                       <Link to="/account">Thông tin tài khoản</Link>
                       <Link to="/order-tracking">Tra cứu đơn hàng</Link>
                       <Link to="/wishlist">Sản phẩm yêu thích</Link>

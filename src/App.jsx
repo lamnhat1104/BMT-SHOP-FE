@@ -20,6 +20,8 @@ import Contact from './pages/Contact';
 import Wishlist from './pages/Wishlist';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Checkout from './pages/Checkout';
+import AdminOrders from './pages/AdminOrders';
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
           </Routes>
         </main>
 
