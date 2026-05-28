@@ -41,7 +41,21 @@ export async function fetchData(endpoint, options = {}) {
         localStorage.removeItem('role');
         window.dispatchEvent(new Event('cartUpdated'));
       }
-      throw new Error(data.message || data || 'Có lỗi xảy ra');
+      let errorMessage = 'Có lỗi xảy ra';
+      if (data && typeof data === 'object') {
+        if (typeof data.message === 'string' && data.message.trim() !== '') {
+          errorMessage = data.message;
+        } else if (typeof data.error === 'string' && data.error.trim() !== '') {
+          errorMessage = data.error;
+        } else if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
+          errorMessage = data.error.message;
+        } else {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (typeof data === 'string' && data.trim() !== '') {
+        errorMessage = data;
+      }
+      throw new Error(errorMessage);
     }
 
     return data;

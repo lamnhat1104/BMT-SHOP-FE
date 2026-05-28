@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { cartApi } from '../api/cart';
 
 function Home() {
   const hotProducts = [
@@ -44,30 +45,44 @@ function Home() {
     }
   ];
 
-  const handleAddToCart = (e, product) => {
+  const handleAddToCart = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existing = cart.find(item => item.id === product.id);
-    
-    if (existing) {
-      existing.quantity += 1;
+    const token = localStorage.getItem('token');
+    const isShoe = product.name && product.name.toLowerCase().includes('giày');
+    const details = product.details || (isShoe ? 'Size: 42' : '3U/G5');
+
+    if (token) {
+      try {
+        await cartApi.addCartItem(product.id, 1, details);
+        window.dispatchEvent(new Event('cartUpdated'));
+        alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
+      } catch (err) {
+        alert(err.message || 'Lỗi thêm sản phẩm vào giỏ hàng');
+      }
     } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        thumbnail: product.thumbnail,
-        brand: product.brand,
-        quantity: 1,
-        details: product.details
-      });
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const existing = cart.find(item => item.id === product.id);
+      
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          thumbnail: product.thumbnail,
+          brand: product.brand,
+          quantity: 1,
+          details: details
+        });
+      }
+      
+      localStorage.setItem('cart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert(`Đã thêm "${product.name}" vào giỏ hàng tạm!`);
     }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
   };
 
   const formatPrice = (price) => {

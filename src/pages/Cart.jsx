@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cartApi } from '../api/cart';
 
 function Cart() {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const token = localStorage.getItem('token');
@@ -196,7 +197,18 @@ function Cart() {
             <span style={{ fontWeight: '700', fontSize: '1.1rem' }}>Tổng cộng</span>
             <span style={{ fontWeight: '700', fontSize: '1.4rem', color: '#ff3b30' }}>{formatPrice(total)}</span>
           </div>
-          <button onClick={() => alert('Chức năng thanh toán đang được phát triển!')} className="btn-primary" style={{ width: '100%', textAlign: 'center', padding: '15px', fontWeight: '700' }}>
+          <button 
+            onClick={() => {
+              if (token) {
+                navigate('/checkout');
+              } else {
+                alert('Vui lòng đăng nhập để tiến hành thanh toán đơn hàng!');
+                navigate('/login?redirect=checkout');
+              }
+            }} 
+            className="btn-primary" 
+            style={{ width: '100%', textAlign: 'center', padding: '15px', fontWeight: '700' }}
+          >
             TIẾN HÀNH THANH TOÁN
           </button>
         </div>

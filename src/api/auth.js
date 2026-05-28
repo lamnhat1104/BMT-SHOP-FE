@@ -34,5 +34,18 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ token, newPassword }),
     });
+  },
+
+  getProfile: async () => {
+    return fetchData('/users/profile', {
+      method: 'GET',
+    });
+  },
+
+  updateProfile: async (profileData) => {
+    return fetchData('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
   }
 };
