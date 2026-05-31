@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 
-// Components
-import Header from './components/Header';
-import Footer from './components/Footer';
+// Layouts
+import UserLayout from './components/UserLayout';
+import AdminLayout from './components/admin/AdminLayout';
 
 // Pages
 import Home from './pages/Home';
@@ -22,37 +22,49 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Checkout from './pages/Checkout';
 import AdminOrders from './pages/AdminOrders';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminProducts from './pages/AdminProducts';
+import AdminCategories from './pages/AdminCategories';
+import AdminCoupons from './pages/AdminCoupons';
+import AdminReviews from './pages/AdminReviews';
 
 function App() {
   return (
     <Router>
-      <div className="app-container">
-        <Header />
-        
-        <main style={{ minHeight: '60vh' }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/order-tracking" element={<OrderTracking />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/verify-otp" element={<VerifyOtp />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-          </Routes>
-        </main>
+      <Routes>
+        {/* Customer pages wrapped in UserLayout */}
+        <Route element={<UserLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/order-tracking" element={<OrderTracking />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/checkout" element={<Checkout />} />
+        </Route>
 
-        <Footer />
-      </div>
+        {/* Admin pages wrapped in AdminLayout (No Header, No Footer) */}
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/coupons" element={<AdminCoupons />} />
+          <Route path="/admin/reviews" element={<AdminReviews />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
 
 export default App;
+
