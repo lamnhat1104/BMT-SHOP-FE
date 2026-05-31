@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 :root {
   --primary-color: #f47920; /* ShopVNB Orange */
@@ -12,30 +13,30 @@
   --transition-speed: 0.3s;
 }
 
-* {
+.app-container * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: 'Inter', sans-serif;
 }
 
-body {
+.app-container body {
   background-color: var(--bg-main);
   color: var(--text-dark);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-a {
+.app-container a {
   text-decoration: none;
   color: inherit;
 }
 
-ul {
+.app-container ul {
   list-style: none;
 }
 
-button {
+.app-container button {
   cursor: pointer;
   border: none;
   outline: none;
@@ -43,16 +44,16 @@ button {
 }
 
 /* Utilities */
-.container {
+.app-container .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.text-primary { color: var(--primary-color); }
-.text-center { text-align: center; }
-.mt-4 { margin-top: 2rem; }
-.mb-4 { margin-bottom: 2rem; }
+.app-container .text-primary { color: var(--primary-color); }
+.app-container .text-center { text-align: center; }
+.app-container .mt-4 { margin-top: 2rem; }
+.app-container .mb-4 { margin-bottom: 2rem; }
 
 /* Global Animations */
 @keyframes fadeIn {
@@ -63,3 +64,22 @@ button {
 .fade-in {
   animation: fadeIn 0.6s ease-out forwards;
 }
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes simpleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: simpleFadeIn 0.25s ease-out forwards;
+}
+
