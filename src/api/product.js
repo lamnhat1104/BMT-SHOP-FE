@@ -6,6 +6,7 @@ export const productApi = {
     if (params.sort) query.append('sort', params.sort);
     if (params.brand) query.append('brand', params.brand);
     if (params.categoryId) query.append('categoryId', params.categoryId);
+    if (params.showHidden !== undefined) query.append('showHidden', params.showHidden);
     
     const queryString = query.toString();
     return fetchData(`/products${queryString ? '?' + queryString : ''}`, {
@@ -16,6 +17,26 @@ export const productApi = {
   getProductById: async (id) => {
     return fetchData(`/products/${id}`, {
       method: 'GET',
+    });
+  },
+
+  createProduct: async (productData) => {
+    return fetchData('/products', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
+  },
+
+  updateProduct: async (id, productData) => {
+    return fetchData(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(productData),
+    });
+  },
+
+  deleteProduct: async (id) => {
+    return fetchData(`/products/${id}`, {
+      method: 'DELETE',
     });
   }
 };

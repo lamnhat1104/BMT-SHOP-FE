@@ -189,7 +189,10 @@ function Header() {
                   {user.token ? (
                     <>
                       {localStorage.getItem('role') === 'admin' && (
-                        <Link to="/admin" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Trang Quản trị (Admin)</Link>
+                        <>
+                          <Link to="/admin/dashboard" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Admin</Link>
+                          <Link to="/admin/orders" style={{ fontWeight: 'bold' }}>Quản trị đơn hàng</Link>
+                        </>
                       )}
                       <Link to="/account">Thông tin tài khoản</Link>
                       <Link to="/order-tracking">Tra cứu đơn hàng</Link>
