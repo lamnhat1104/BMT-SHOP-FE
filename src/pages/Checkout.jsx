@@ -31,12 +31,34 @@ function Checkout() {
       return;
     }
 
+    const query = new URLSearchParams(window.location.search);
+    const vnpayStatus = query.get('vnpay');
+    const orderCode = query.get('orderCode');
+    const phone = query.get('phone');
+
+    if (vnpayStatus === 'success' && orderCode && phone) {
+      setLoading(true);
+      orderApi.trackOrder(orderCode, phone)
+        .then(result => {
+          setOrderSuccess(result);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Lỗi tải thông tin đơn hàng sau thanh toán:", err);
+          setErrorMsg("Thanh toán thành công nhưng không thể lấy thông tin đơn hàng.");
+          setLoading(false);
+        });
+      return;
+    } else if (vnpayStatus === 'failed') {
+      setErrorMsg("Thanh toán qua cổng VNPay thất bại hoặc đã bị hủy.");
+    }
+
     const loadData = async () => {
       try {
         // Load cart items
         const cart = await cartApi.getCart();
         const items = Array.isArray(cart) ? cart : [];
-        if (items.length === 0) {
+        if (items.length === 0 && vnpayStatus !== 'failed') {
           navigate('/cart');
           return;
         }
@@ -109,6 +131,13 @@ function Checkout() {
       };
 
       const result = await orderApi.createOrder(orderPayload);
+      
+      if (paymentMethod === 'VNPAY' && result.paymentUrl) {
+        window.dispatchEvent(new Event('cartUpdated'));
+        window.location.href = result.paymentUrl;
+        return;
+      }
+
       setOrderSuccess(result);
       
       // Dispatch cart updated event so header changes to 0
@@ -159,7 +188,7 @@ function Checkout() {
             <div>
               <p style={{ margin: '0 0 5px', color: 'var(--text-light)', fontSize: '0.85rem' }}>Phương thức thanh toán</p>
               <strong style={{ fontSize: '1rem', color: 'var(--primary-color)' }}>
-                {orderSuccess.paymentMethod === 'COD' ? 'Thanh toán COD' : orderSuccess.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản Ngân hàng' : 'Ví điện tử'}
+                {orderSuccess.paymentMethod === 'COD' ? 'Thanh toán COD' : orderSuccess.paymentMethod === 'VNPAY' ? 'Cổng thanh toán VNPay' : 'Chuyển khoản Ngân hàng (VietQR)'}
               </strong>
             </div>
             <div>
@@ -317,34 +346,34 @@ function Checkout() {
                 </div>
               </label>
 
-              {/* BANK TRANSFER */}
+              {/* VNPAY */}
               <label style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '15px', 
                 padding: '15px 20px', 
-                border: paymentMethod === 'BANK_TRANSFER' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                border: paymentMethod === 'VNPAY' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
                 borderRadius: '8px', 
                 cursor: 'pointer',
-                backgroundColor: paymentMethod === 'BANK_TRANSFER' ? 'rgba(244,121,32,0.03)' : 'transparent',
+                backgroundColor: paymentMethod === 'VNPAY' ? 'rgba(244,121,32,0.03)' : 'transparent',
                 transition: '0.3s'
               }}>
                 <input 
                   type="radio" 
                   name="paymentMethod" 
-                  value="BANK_TRANSFER" 
-                  checked={paymentMethod === 'BANK_TRANSFER'} 
-                  onChange={() => setPaymentMethod('BANK_TRANSFER')}
+                  value="VNPAY" 
+                  checked={paymentMethod === 'VNPAY'} 
+                  onChange={() => setPaymentMethod('VNPAY')}
                   style={{ accentColor: 'var(--primary-color)', width: '18px', height: '18px' }}
                 />
                 <div>
-                  <strong style={{ display: 'block', fontSize: '0.95rem' }}>Chuyển khoản ngân hàng (Quét VietQR)</strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>Quét mã QR qua app ngân hàng của bạn để chuyển khoản ngay lập tức.</span>
+                  <strong style={{ display: 'block', fontSize: '0.95rem' }}>Thanh toán qua cổng VNPay</strong>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>Thanh toán trực tuyến an toàn qua ứng dụng ngân hàng hoặc thẻ ATM/Quốc tế.</span>
                 </div>
               </label>
 
-              {/* Dynamic VietQR Details Container */}
-              {paymentMethod === 'BANK_TRANSFER' && (
+              {/* Dynamic VNPay Details Container */}
+              {paymentMethod === 'VNPAY' && (
                 <div className="fade-in" style={{ 
                   marginTop: '10px', 
                   border: '1.5px dashed var(--primary-color)', 
@@ -352,44 +381,14 @@ function Checkout() {
                   padding: '20px', 
                   backgroundColor: '#fffdf9',
                   display: 'flex',
-                  gap: '20px',
-                  alignItems: 'center',
-                  flexWrap: 'wrap'
+                  gap: '15px',
+                  alignItems: 'center'
                 }}>
-                  {/* VietQR Generator API Integration */}
-                  <div style={{ textAlign: 'center', flexShrink: 0, margin: '0 auto' }}>
-                    <img 
-                      src={`https://img.vietqr.io/image/vietinbank-10287399281-compact2.png?amount=${totalAmount}&addInfo=BMT_SHOP&accountName=CONG%20TY%20CO%20PHAN%20BMT%20SHOP`} 
-                      alt="VietQR Chuyển Khoản BMT SHOP"
-                      style={{ width: '170px', height: '170px', objectFit: 'contain', border: '1px solid #eaeaea', borderRadius: '8px', padding: '5px', backgroundColor: 'white' }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '8px', fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: 'bold' }}>
-                      <QrCode size={14} /> QUÉT MÃ ĐỂ CHUYỂN
-                    </div>
+                  <div style={{ color: 'var(--primary-color)' }}>
+                    <CreditCard size={28} />
                   </div>
-
-                  <div style={{ flex: 1, minWidth: '200px', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                    <h4 style={{ margin: '0 0 10px', color: 'var(--primary-color)', fontWeight: '700' }}>THÔNG TIN CHUYỂN KHOẢN:</h4>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '6px' }}>
-                      <span>Ngân hàng:</span>
-                      <strong>VietinBank (Công thương)</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '6px' }}>
-                      <span>Số tài khoản:</span>
-                      <strong>10287399281</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '6px' }}>
-                      <span>Chủ tài khoản:</span>
-                      <strong>CONG TY CO PHAN BMT SHOP</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '6px' }}>
-                      <span>Số tiền:</span>
-                      <strong style={{ color: '#ff3b30' }}>{formatPrice(totalAmount)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px' }}>
-                      <span>Nội dung CK:</span>
-                      <strong style={{ color: 'var(--primary-color)' }}>BMT_SHOP</strong>
-                    </div>
+                  <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
+                    <strong>Thanh toán trực tuyến VNPay:</strong> Bạn sẽ được chuyển hướng tới cổng thanh toán bảo mật VNPay sau khi nhấn đặt hàng. Vui lòng chuẩn bị sẵn ứng dụng ngân hàng hỗ trợ quét mã VNPAY-QR hoặc thẻ thanh toán.
                   </div>
                 </div>
               )}

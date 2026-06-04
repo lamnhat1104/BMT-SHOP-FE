@@ -144,17 +144,21 @@ function Home() {
         </div>
         <div className="product-grid">
           {hotProducts.map(p => (
-            <Link to={`/products/${p.id}`} key={p.id} className="product-card" style={{ display: 'block', color: 'inherit' }}>
+            <div className="product-card" key={p.id}>
               {p.tag && <div className="product-badge" style={{ backgroundColor: p.tag.includes('%') ? '#ff3b30' : '#ffb800' }}>{p.tag}</div>}
-              <img src={p.thumbnail} alt={p.name} className="product-image" style={p.style} />
-              <div className="product-brand">{p.brand}</div>
-              <h3 className="product-title">{p.name}</h3>
-              <div className="product-price">
-                <span className="price-current">{formatPrice(p.price)}</span>
-                {p.oldPrice && <span className="price-old">{p.oldPrice}</span>}
-              </div>
+              <Link to={`/products/${p.id}`} className="product-card-link">
+                <div className="product-image-wrapper">
+                  <img src={p.thumbnail} alt={p.name} className="product-image" style={p.style} />
+                </div>
+                <div className="product-brand">{p.brand}</div>
+                <h3 className="product-title">{p.name}</h3>
+                <div className="product-price">
+                  <span className="price-current">{formatPrice(p.price)}</span>
+                  {p.oldPrice && <span className="price-old">{p.oldPrice}</span>}
+                </div>
+              </Link>
               <button onClick={(e) => handleAddToCart(e, p)} className="btn-add-to-cart">Thêm vào giỏ</button>
-            </Link>
+            </div>
           ))}
         </div>
       </section>

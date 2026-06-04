@@ -3,7 +3,7 @@ import React from 'react';
 function ChatWidget() {
   const zaloPhone = '0977508430'; // Số hotline từ Header
   const zaloUrl = `https://zalo.me/${zaloPhone}`;
-  const messengerUrl = 'https://m.me/bmtshop'; // Link Messenger fanpage mẫu
+  const messengerUrl = 'https://www.facebook.com/profile.php?id=61590785572965'; // Link Facebook cá nhân/trang của người dùng
 
   return (
     <>

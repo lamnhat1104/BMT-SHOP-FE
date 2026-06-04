@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
-
 function ProductDetail() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -11,6 +10,30 @@ function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState('');
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedWeight, setSelectedWeight] = useState('');
+  const [activeTab, setActiveTab] = useState('description');
+
+  const hasDescription = useMemo(() => {
+    if (!product || !product.description) return false;
+    const desc = product.description.trim();
+    const pName = product.name.trim();
+    return desc !== '' && desc !== pName;
+  }, [product]);
+
+  useEffect(() => {
+    if (product) {
+      const desc = product.description?.trim() || '';
+      const pName = product.name?.trim() || '';
+      const hasDesc = desc !== '' && desc !== pName;
+      if (!hasDesc) {
+        setActiveTab('specs');
+      } else {
+        setActiveTab('description');
+      }
+    }
+  }, [product]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -20,7 +43,11 @@ function ProductDetail() {
         if (data) {
           setActiveImg(data.imageUrl || '/racket_product_1.png');
           if (data.variants && data.variants.length > 0) {
-            setSelectedVariant(data.variants[0]);
+            const defaultVar = data.variants[0];
+            setSelectedVariant(defaultVar);
+            setSelectedColor(defaultVar.color || '');
+            setSelectedSize(defaultVar.size || '');
+            setSelectedWeight(defaultVar.weight || '');
           }
         }
       } catch (err) {
@@ -32,18 +59,94 @@ function ProductDetail() {
     fetchProduct();
   }, [id]);
 
-  // Tự động chuyển đổi ảnh chính sang màu sắc được chọn khi người dùng bấm chọn biến thể
+  const uniqueColors = useMemo(() => {
+    if (!product || !product.variants) return [];
+    const colors = product.variants.map(v => v.color).filter(Boolean);
+    return [...new Set(colors)];
+  }, [product]);
+
+  const uniqueSizes = useMemo(() => {
+    if (!product || !product.variants) return [];
+    const sizes = product.variants.map(v => v.size).filter(Boolean);
+    return [...new Set(sizes)];
+  }, [product]);
+
+  const uniqueWeights = useMemo(() => {
+    if (!product || !product.variants) return [];
+    const weights = product.variants.map(v => v.weight).filter(Boolean);
+    return [...new Set(weights)];
+  }, [product]);
+
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+    if (product && product.variants) {
+      const match = product.variants.find(v => v.color === color && (selectedSize ? v.size === selectedSize : true))
+                    || product.variants.find(v => v.color === color);
+      if (match) {
+        setSelectedVariant(match);
+        if (match.size) setSelectedSize(match.size);
+      }
+    }
+  };
+
+  const handleSizeSelect = (size) => {
+    setSelectedSize(size);
+    if (product && product.variants) {
+      const match = product.variants.find(v => v.size === size && (selectedColor ? v.color === selectedColor : true))
+                    || product.variants.find(v => v.size === size);
+      if (match) {
+        setSelectedVariant(match);
+        if (match.color) setSelectedColor(match.color);
+      }
+    }
+  };
+
+  const handleWeightSelect = (weight) => {
+    setSelectedWeight(weight);
+    if (product && product.variants) {
+      const match = product.variants.find(v => v.weight === weight);
+      if (match) {
+        setSelectedVariant(match);
+      }
+    }
+  };
+
+  // Tự động chuyển đổi ảnh chính sang biến thể được chọn
   useEffect(() => {
-    if (product && selectedVariant && selectedVariant.color) {
-      const colorLower = selectedVariant.color.toLowerCase();
-      const colorImg = product.images?.find(
-        img => img.color && img.color.toLowerCase() === colorLower
-      );
-      if (colorImg) {
-        setActiveImg(colorImg.imageUrl);
+    if (selectedVariant) {
+      if (selectedVariant.images && selectedVariant.images.length > 0) {
+        const mainImg = selectedVariant.images.find(img => img.isMain) || selectedVariant.images[0];
+        if (mainImg) {
+          setActiveImg(mainImg.imageUrl);
+        }
+      } else if (product && selectedVariant.color) {
+        const colorLower = selectedVariant.color.toLowerCase();
+        const colorImg = product.images?.find(
+          img => img.color && img.color.toLowerCase() === colorLower
+        );
+        if (colorImg) {
+          setActiveImg(colorImg.imageUrl);
+        }
       }
     }
   }, [selectedVariant, product]);
+
+  // Lọc bộ sưu tập ảnh theo biến thể được chọn
+  const filteredImages = useMemo(() => {
+    if (!product) return [];
+    if (selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) {
+      return selectedVariant.images;
+    }
+    if (!product.images) return [];
+    if (selectedVariant && selectedVariant.color) {
+      const colorLower = selectedVariant.color.toLowerCase();
+      const hasColorImages = product.images.some(img => img.color && img.color.toLowerCase() === colorLower);
+      if (hasColorImages) {
+        return product.images.filter(img => !img.color || img.color.toLowerCase() === colorLower);
+      }
+    }
+    return product.images;
+  }, [product, selectedVariant]);
 
   const formatPrice = (price) => {
     if (!price) return '0₫';
@@ -122,18 +225,52 @@ function ProductDetail() {
   const hasWeights = product.variants && product.variants.some(v => v.weight);
   const hasColors = product.variants && product.variants.some(v => v.color);
 
-  // Lọc bộ sưu tập ảnh theo màu sắc được chọn của biến thể
-  const filteredImages = useMemo(() => {
-    if (!product || !product.images) return [];
-    if (selectedVariant && selectedVariant.color) {
-      const colorLower = selectedVariant.color.toLowerCase();
-      const hasColorImages = product.images.some(img => img.color && img.color.toLowerCase() === colorLower);
-      if (hasColorImages) {
-        return product.images.filter(img => !img.color || img.color.toLowerCase() === colorLower);
-      }
+  const renderSpecs = () => {
+    if (isShoe) {
+      return (
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold', width: '200px' }}>Thương hiệu</td><td style={{ padding: '10px' }}>{brand}</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Loại sản phẩm</td><td style={{ padding: '10px' }}>Giày cầu lông chuyên dụng</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Chất liệu đế</td><td style={{ padding: '10px' }}>Cao su giảm chấn, Power Cushion êm ái</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Bảo hành</td><td style={{ padding: '10px' }}>3 tháng chính hãng</td></tr>
+          </tbody>
+        </table>
+      );
+    } else {
+      return (
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold', width: '200px' }}>Thương hiệu</td><td style={{ padding: '10px' }}>{brand}</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Độ cứng thân vợt</td><td style={{ padding: '10px' }}>Trung bình / Cứng</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Sức căng tối đa</td><td style={{ padding: '10px' }}>28 - 30 lbs (12.5 - 13.5 kg)</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Trọng lượng / Chu vi cán</td><td style={{ padding: '10px' }}>3U/G5, 4U/G5</td></tr>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}><td style={{ padding: '10px', fontWeight: 'bold' }}>Bảo hành</td><td style={{ padding: '10px' }}>3 tháng chính hãng</td></tr>
+          </tbody>
+        </table>
+      );
     }
-    return product.images;
-  }, [product, selectedVariant]);
+  };
+
+  const renderReviews = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {[
+          { author: "Nguyễn Văn Hùng", rating: 5, date: "02/06/2026", comment: "Sản phẩm chính hãng chất lượng cực kỳ tốt. Vợt căng đều, đánh êm tay." },
+          { author: "Trần Thị Lan", rating: 5, date: "28/05/2026", comment: "Giày đi vừa vặn, bám sân rất tốt. Shop tư vấn nhiệt tình, ship nhanh." }
+        ].map((rev, idx) => (
+          <div key={idx} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <strong>{rev.author}</strong>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>{rev.date}</span>
+            </div>
+            <div style={{ color: '#ffb800', marginBottom: '8px' }}>{"★".repeat(rev.rating)}</div>
+            <p style={{ margin: 0, color: 'var(--text-dark)' }}>{rev.comment}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="container fade-in" style={{ padding: '40px 20px' }}>
@@ -201,79 +338,79 @@ function ProductDetail() {
 
           {/* Dynamic Variant Options Selection */}
           <div className="product-options" style={{ marginBottom: '35px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {hasSizes && (
+            {uniqueSizes.length > 0 && (
               <div className="option-group">
                 <h4 style={{ marginBottom: '12px', fontWeight: 700 }}>Chọn kích cỡ (Size):</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {product.variants.filter(v => v.size).map(v => (
+                  {uniqueSizes.map(size => (
                     <button 
-                      key={v.id} 
-                      onClick={() => setSelectedVariant(v)}
+                      key={size} 
+                      onClick={() => handleSizeSelect(size)}
                       style={{ 
                         padding: '10px 20px', 
-                        border: selectedVariant?.id === v.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
-                        color: selectedVariant?.id === v.id ? 'var(--primary-color)' : 'var(--text-color)',
+                        border: selectedSize === size ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                        color: selectedSize === size ? 'var(--primary-color)' : 'var(--text-color)',
                         borderRadius: '6px', 
-                        backgroundColor: selectedVariant?.id === v.id ? 'rgba(244,121,32,0.08)' : 'white', 
-                        fontWeight: selectedVariant?.id === v.id ? '700' : '500',
+                        backgroundColor: selectedSize === size ? 'rgba(244,121,32,0.08)' : 'white', 
+                        fontWeight: selectedSize === size ? '700' : '500',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         minWidth: '60px'
                       }}
                     >
-                      {v.size}
+                      {size}
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {hasWeights && (
+            {uniqueWeights.length > 0 && (
               <div className="option-group">
                 <h4 style={{ marginBottom: '12px', fontWeight: 700 }}>Chọn thông số (Trọng lượng / Cán):</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {product.variants.filter(v => v.weight).map(v => (
+                  {uniqueWeights.map(weight => (
                     <button 
-                      key={v.id} 
-                      onClick={() => setSelectedVariant(v)}
+                      key={weight} 
+                      onClick={() => handleWeightSelect(weight)}
                       style={{ 
                         padding: '10px 20px', 
-                        border: selectedVariant?.id === v.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
-                        color: selectedVariant?.id === v.id ? 'var(--primary-color)' : 'var(--text-color)',
+                        border: selectedWeight === weight ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                        color: selectedWeight === weight ? 'var(--primary-color)' : 'var(--text-color)',
                         borderRadius: '6px', 
-                        backgroundColor: selectedVariant?.id === v.id ? 'rgba(244,121,32,0.08)' : 'white', 
-                        fontWeight: selectedVariant?.id === v.id ? '700' : '500',
+                        backgroundColor: selectedWeight === weight ? 'rgba(244,121,32,0.08)' : 'white', 
+                        fontWeight: selectedWeight === weight ? '700' : '500',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {v.weight}/{v.grip || 'G5'}
+                      {weight}/G5
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {hasColors && (
+            {uniqueColors.length > 0 && (
               <div className="option-group">
                 <h4 style={{ marginBottom: '12px', fontWeight: 700 }}>Chọn màu sắc:</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {product.variants.filter(v => v.color).map(v => (
+                  {uniqueColors.map(color => (
                     <button 
-                      key={v.id} 
-                      onClick={() => setSelectedVariant(v)}
+                      key={color} 
+                      onClick={() => handleColorSelect(color)}
                       style={{ 
                         padding: '10px 20px', 
-                        border: selectedVariant?.id === v.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
-                        color: selectedVariant?.id === v.id ? 'var(--primary-color)' : 'var(--text-color)',
+                        border: selectedColor === color ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                        color: selectedColor === color ? 'var(--primary-color)' : 'var(--text-color)',
                         borderRadius: '6px', 
-                        backgroundColor: selectedVariant?.id === v.id ? 'rgba(244,121,32,0.08)' : 'white', 
-                        fontWeight: selectedVariant?.id === v.id ? '700' : '500',
+                        backgroundColor: selectedColor === color ? 'rgba(244,121,32,0.08)' : 'white', 
+                        fontWeight: selectedColor === color ? '700' : '500',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {v.color}
+                      {color}
                     </button>
                   ))}
                 </div>
@@ -319,12 +456,51 @@ function ProductDetail() {
       {/* Tabs */}
       <div className="product-tabs" style={{ marginTop: '50px', backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '12px' }}>
         <div className="tab-headers" style={{ display: 'flex', gap: '30px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '30px' }}>
-          <h3 style={{ color: 'var(--primary-color)', borderBottom: '3px solid var(--primary-color)', paddingBottom: '15px', marginBottom: '-16px', cursor: 'pointer' }}>Mô Tả Sản Phẩm</h3>
-          <h3 style={{ color: 'var(--text-light)', cursor: 'pointer' }}>Thông Số Kỹ Thuật</h3>
-          <h3 style={{ color: 'var(--text-light)', cursor: 'pointer' }}>Đánh Giá (5)</h3>
+          {hasDescription && (
+            <h3 
+              onClick={() => setActiveTab('description')}
+              style={{ 
+                color: activeTab === 'description' ? 'var(--primary-color)' : 'var(--text-light)', 
+                borderBottom: activeTab === 'description' ? '3px solid var(--primary-color)' : 'none', 
+                paddingBottom: '15px', 
+                marginBottom: '-16px', 
+                cursor: 'pointer' 
+              }}
+            >
+              Mô Tả Sản Phẩm
+            </h3>
+          )}
+          <h3 
+            onClick={() => setActiveTab('specs')}
+            style={{ 
+              color: activeTab === 'specs' ? 'var(--primary-color)' : 'var(--text-light)', 
+              borderBottom: activeTab === 'specs' ? '3px solid var(--primary-color)' : 'none', 
+              paddingBottom: '15px', 
+              marginBottom: '-16px', 
+              cursor: 'pointer' 
+            }}
+          >
+            Thông Số Kỹ Thuật
+          </h3>
+          <h3 
+            onClick={() => setActiveTab('reviews')}
+            style={{ 
+              color: activeTab === 'reviews' ? 'var(--primary-color)' : 'var(--text-light)', 
+              borderBottom: activeTab === 'reviews' ? '3px solid var(--primary-color)' : 'none', 
+              paddingBottom: '15px', 
+              marginBottom: '-16px', 
+              cursor: 'pointer' 
+            }}
+          >
+            Đánh Giá (5)
+          </h3>
         </div>
         <div className="tab-content" style={{ lineHeight: 1.8 }}>
-          <p style={{ whiteSpace: 'pre-line' }}>{product.description || 'Chưa có mô tả cho sản phẩm này.'}</p>
+          {activeTab === 'description' && hasDescription && (
+            <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
+          )}
+          {activeTab === 'specs' && renderSpecs()}
+          {activeTab === 'reviews' && renderReviews()}
         </div>
       </div>
     </div>
