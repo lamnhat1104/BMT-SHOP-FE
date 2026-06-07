@@ -357,108 +357,37 @@ function Products() {
                 }}
               >
                 {currentProducts.map((p) => (
-                  <Link
-                    to={`/products/${p.id}`}
-                    key={p.id}
-                    style={{
-                      textDecoration:
-                        'none',
-                      color: '#000',
-                      position: 'relative'
-                    }}
-                  >
+                  <div className="product-card" key={p.id}>
                     {/* Badge */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '10px',
-                        left: '10px',
-                        background: 'red',
-                        color: '#fff',
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        zIndex: 10
-                      }}
-                    >
-                      Liên hệ
+                    <div className="product-badge">
+                      CHÍNH HÃNG
                     </div>
 
-                    {/* Card */}
-                    <div
-                      style={{
-                        border:
-                          '1px solid #eee',
-                        padding: '15px',
-                        borderRadius: '6px',
-                        transition: '0.3s',
-                        height: '100%'
-                      }}
-                    >
-                      <img
-                        src={
-                          p.imageUrl ||
-                          '/racket_product_1.png'
-                        }
-                        alt={p.name}
-                        style={{
-                          width: '100%',
-                          height: '220px',
-                          objectFit:
-                            'contain'
-                        }}
-                      />
-
-                      <h3
-                        style={{
-                          fontSize: '15px',
-                          marginTop: '15px',
-                          minHeight: '40px'
-                        }}
-                      >
-                        {p.name}
-                      </h3>
-
-                      <div
-                        style={{
-                          color: 'red',
-                          fontWeight:
-                            'bold',
-                          fontSize: '20px',
-                          marginTop: '10px'
-                        }}
-                      >
-                        {formatPrice(
-                          p.price
-                        )}
+                    <Link to={`/products/${p.id}`} className="product-card-link">
+                      <div className="product-image-wrapper">
+                        <img
+                          src={p.imageUrl || '/racket_product_1.png'}
+                          alt={p.name}
+                          className="product-image"
+                        />
                       </div>
-
-                      <button
-                        onClick={(e) =>
-                          handleAddToCart(
-                            e,
-                            p
-                          )
-                        }
-                        style={{
-                          width: '100%',
-                          marginTop: '15px',
-                          padding: '10px',
-                          border: 'none',
-                          background:
-                            '#ff4d4f',
-                          color: '#fff',
-                          fontWeight:
-                            'bold',
-                          cursor: 'pointer',
-                          borderRadius:
-                            '5px'
-                        }}
-                      >
-                        Thêm vào giỏ
-                      </button>
-                    </div>
-                  </Link>
+                      <div className="product-brand">{p.brand || 'CHÍNH HÃNG'}</div>
+                      <h3 className="product-title">{p.name}</h3>
+                      <div className="product-price">
+                        <span className="price-current">{formatPrice(p.price)}</span>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddToCart(e, p);
+                      }}
+                      className="btn-add-to-cart"
+                    >
+                      Thêm vào giỏ
+                    </button>
+                  </div>
                 ))}
               </div>
 

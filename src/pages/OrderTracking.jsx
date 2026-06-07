@@ -266,7 +266,7 @@ function OrderTracking() {
                 <CreditCard size={18} style={{ color: 'var(--primary-color)', flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'block' }}>Thanh toán</span>
-                  <strong>{orderData.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : 'Chuyển khoản Ngân hàng'}</strong>
+                  <strong>{orderData.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : orderData.paymentMethod === 'VNPAY' ? 'Thanh toán qua cổng VNPay' : 'Chuyển khoản Ngân hàng'}</strong>
                 </div>
               </div>
             </div>

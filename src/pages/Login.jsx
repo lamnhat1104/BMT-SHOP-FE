@@ -116,7 +116,7 @@ function Login() {
             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
               <input type="checkbox" /> Nhớ mật khẩu
             </label>
-            <a href="#" style={{ color: 'var(--primary-color)' }}>Quên mật khẩu?</a>
+            <Link to="/forgot-password" style={{ color: 'var(--primary-color)' }}>Quên mật khẩu?</Link>
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '15px', marginBottom: '20px', opacity: loading ? 0.7 : 1 }}>
