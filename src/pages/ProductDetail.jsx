@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
+import { reviewApi } from '../api/review';
+import ReviewSection from '../components/ReviewSection';
 function ProductDetail() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -14,6 +16,7 @@ function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedWeight, setSelectedWeight] = useState('');
   const [activeTab, setActiveTab] = useState('description');
+  const [reviews, setReviews] = useState([]);
 
   const hasDescription = useMemo(() => {
     if (!product || !product.description) return false;
@@ -48,6 +51,12 @@ function ProductDetail() {
             setSelectedColor(defaultVar.color || '');
             setSelectedSize(defaultVar.size || '');
             setSelectedWeight(defaultVar.weight || '');
+          }
+          try {
+            const reviewData = await reviewApi.getProductReviews(id);
+            setReviews(reviewData);
+          } catch (e) {
+            console.error("Error fetching reviews", e);
           }
         }
       } catch (err) {
@@ -220,6 +229,8 @@ function ProductDetail() {
   const displayPrice = selectedVariant ? selectedVariant.price : product.price;
   const displayStock = selectedVariant ? selectedVariant.stock : product.stock;
 
+  const averageRating = reviews.length > 0 ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length : 0;
+
   // Xác định các loại thuộc tính biến thể hiện có
   const hasSizes = product.variants && product.variants.some(v => v.size);
   const hasWeights = product.variants && product.variants.some(v => v.weight);
@@ -253,23 +264,7 @@ function ProductDetail() {
   };
 
   const renderReviews = () => {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {[
-          { author: "Nguyễn Văn Hùng", rating: 5, date: "02/06/2026", comment: "Sản phẩm chính hãng chất lượng cực kỳ tốt. Vợt căng đều, đánh êm tay." },
-          { author: "Trần Thị Lan", rating: 5, date: "28/05/2026", comment: "Giày đi vừa vặn, bám sân rất tốt. Shop tư vấn nhiệt tình, ship nhanh." }
-        ].map((rev, idx) => (
-          <div key={idx} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong>{rev.author}</strong>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>{rev.date}</span>
-            </div>
-            <div style={{ color: '#ffb800', marginBottom: '8px' }}>{"★".repeat(rev.rating)}</div>
-            <p style={{ margin: 0, color: 'var(--text-dark)' }}>{rev.comment}</p>
-          </div>
-        ))}
-      </div>
-    );
+    return <ReviewSection reviews={reviews} />;
   };
 
   return (
@@ -323,8 +318,12 @@ function ProductDetail() {
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '20px', lineHeight: 1.3 }}>{name}</h1>
           
           <div className="product-rating" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            <span style={{ color: '#ffb800' }}>★★★★★</span>
-            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>(5 đánh giá) | Đã bán 12</span>
+            <span style={{ color: '#ffb800' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star} style={{ color: star <= Math.round(averageRating) ? '#ffb800' : '#e0e0e0' }}>★</span>
+              ))}
+            </span>
+            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>({reviews.length} đánh giá)</span>
           </div>
 
           <div className="product-price-stock" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px' }}>
@@ -482,7 +481,7 @@ function ProductDetail() {
           >
             Thông Số Kỹ Thuật
           </h3>
-          <h3 
+            <h3 
             onClick={() => setActiveTab('reviews')}
             style={{ 
               color: activeTab === 'reviews' ? 'var(--primary-color)' : 'var(--text-light)', 
@@ -492,7 +491,7 @@ function ProductDetail() {
               cursor: 'pointer' 
             }}
           >
-            Đánh Giá (5)
+            Đánh Giá ({reviews.length})
           </h3>
         </div>
         <div className="tab-content" style={{ lineHeight: 1.8 }}>

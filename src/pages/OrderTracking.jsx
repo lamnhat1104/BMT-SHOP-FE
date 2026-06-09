@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { orderApi } from '../api/order';
+import { reviewApi } from '../api/review';
 import { Search, MapPin, CreditCard, ShoppingBag, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import ReviewFormModal from '../components/ReviewFormModal';
 
 function OrderTracking() {
   const [orderCode, setOrderCode] = useState('');
@@ -10,6 +12,10 @@ function OrderTracking() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [orderData, setOrderData] = useState(null);
+  
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewingProduct, setReviewingProduct] = useState(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const handleTrack = async (e) => {
     e.preventDefault();
@@ -43,6 +49,25 @@ function OrderTracking() {
       return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return dateStr;
+    }
+  };
+
+  const handleReviewClick = (product) => {
+    setReviewingProduct(product);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleReviewSubmit = async (data) => {
+    try {
+      setIsSubmittingReview(true);
+      await reviewApi.createReview(orderData.id, reviewingProduct.productId, data.rating, data.comment, data.files);
+      alert('Cảm ơn bạn đã đánh giá sản phẩm!');
+      setIsReviewModalOpen(false);
+      setReviewingProduct(null);
+    } catch (err) {
+      alert(err.message || 'Lỗi gửi đánh giá');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -311,6 +336,16 @@ function OrderTracking() {
                       <td style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '700' }}>{item.quantity}</td>
                       <td style={{ padding: '12px 15px', textAlign: 'right', fontWeight: '600', color: '#ff3b30' }}>
                         {formatPrice(item.price * item.quantity)}
+                        {(orderData.status === 'completed' || orderData.status === 'Hoàn thành') && (
+                          <div style={{ marginTop: '10px' }}>
+                            <button 
+                              onClick={() => handleReviewClick(item)}
+                              style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              Viết đánh giá
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -327,6 +362,13 @@ function OrderTracking() {
           </div>
         )}
       </div>
+
+      <ReviewFormModal 
+        isOpen={isReviewModalOpen}
+        onClose={() => { setIsReviewModalOpen(false); setReviewingProduct(null); }}
+        onSubmit={handleReviewSubmit}
+        isSubmitting={isSubmittingReview}
+      />
     </div>
   );
 }
