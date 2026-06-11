@@ -24,9 +24,13 @@ export const reviewApi = {
 
   createReview: async (orderId, productId, rating, comment, files) => {
     const formData = new FormData();
-    formData.append('orderId', orderId);
+    if (orderId !== null && orderId !== undefined) {
+      formData.append('orderId', orderId);
+    }
     formData.append('productId', productId);
-    formData.append('rating', rating);
+    if (rating !== null && rating !== undefined) {
+      formData.append('rating', rating);
+    }
     formData.append('comment', comment);
     
     if (files && files.length > 0) {
@@ -36,7 +40,6 @@ export const reviewApi = {
     }
 
     const token = localStorage.getItem('token');
-    // Using native fetch to avoid Content-Type json being set automatically
     const response = await fetch('http://localhost:8080/api/reviews', {
       method: 'POST',
       headers: {
@@ -50,11 +53,22 @@ export const reviewApi = {
         throw new Error(err || 'Failed to submit review');
     }
     
-    // Check if it's JSON
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
         return response.json();
     }
     return response.text();
+  },
+
+  updateReviewByUser: async (id, comment) => {
+    return fetchData(`/reviews/${id}?comment=${encodeURIComponent(comment)}`, {
+      method: 'PUT',
+    });
+  },
+
+  deleteReviewByUser: async (id) => {
+    return fetchData(`/reviews/${id}`, {
+      method: 'DELETE',
+    });
   }
 };

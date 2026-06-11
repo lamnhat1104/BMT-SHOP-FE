@@ -68,6 +68,17 @@ function ProductDetail() {
     fetchProduct();
   }, [id]);
 
+  const refreshReviews = async () => {
+    if (product) {
+      try {
+        const reviewData = await reviewApi.getProductReviews(product.id);
+        setReviews(reviewData);
+      } catch (e) {
+        console.error("Error fetching reviews", e);
+      }
+    }
+  };
+
   const uniqueColors = useMemo(() => {
     if (!product || !product.variants) return [];
     const colors = product.variants.map(v => v.color).filter(Boolean);
@@ -264,7 +275,7 @@ function ProductDetail() {
   };
 
   const renderReviews = () => {
-    return <ReviewSection reviews={reviews} />;
+    return <ReviewSection reviews={reviews} productId={product?.id} onReviewAdded={refreshReviews} />;
   };
 
   return (
