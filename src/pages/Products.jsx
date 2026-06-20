@@ -10,6 +10,7 @@ function Products() {
   const [categoryId, setCategoryId] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedSort, setSelectedSort] = useState('newest');
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,7 +18,7 @@ function Products() {
 
   useEffect(() => {
     fetchProducts();
-  }, [categoryId, selectedBrand, selectedSort]);
+  }, [categoryId, selectedBrand, selectedSort, selectedPriceRange]);
 
   const fetchProducts = async () => {
     try {
@@ -26,7 +27,9 @@ function Products() {
       const data = await productApi.getAllProducts({
         categoryId,
         brand: selectedBrand,
-        sort: selectedSort
+        sort: selectedSort,
+        minPrice: selectedPriceRange?.min,
+        maxPrice: selectedPriceRange?.max
       });
 
       setProducts(data);
@@ -118,11 +121,11 @@ function Products() {
             </h3>
 
             {[
-              'Giá dưới 500.000đ',
-              '500.000đ - 1 triệu',
-              '1 - 2 triệu',
-              '2 - 3 triệu',
-              'Giá trên 3 triệu'
+              { label: 'Giá dưới 500.000đ', min: null, max: 500000 },
+              { label: '500.000đ - 1 triệu', min: 500000, max: 1000000 },
+              { label: '1 - 2 triệu', min: 1000000, max: 2000000 },
+              { label: '2 - 3 triệu', min: 2000000, max: 3000000 },
+              { label: 'Giá trên 3 triệu', min: 3000000, max: null }
             ].map((price, index) => (
               <label
                 key={index}
@@ -133,8 +136,12 @@ function Products() {
                   cursor: 'pointer'
                 }}
               >
-                <input type="checkbox" />
-                {price}
+                <input 
+                  type="checkbox" 
+                  checked={selectedPriceRange?.label === price.label}
+                  onChange={() => setSelectedPriceRange(selectedPriceRange?.label === price.label ? null : price)}
+                />
+                {price.label}
               </label>
             ))}
           </div>
@@ -167,10 +174,10 @@ function Products() {
                 }}
               >
                 <input
-                  type="radio"
+                  type="checkbox"
                   checked={selectedBrand === brand}
                   onChange={() =>
-                    setSelectedBrand(brand)
+                    setSelectedBrand(selectedBrand === brand ? null : brand)
                   }
                 />
                 {brand}
@@ -218,10 +225,10 @@ function Products() {
                 }}
               >
                 <input
-                  type="radio"
+                  type="checkbox"
                   checked={categoryId === cat.id}
                   onChange={() =>
-                    setCategoryId(cat.id)
+                    setCategoryId(categoryId === cat.id ? null : cat.id)
                   }
                 />
                 {cat.name}
@@ -297,6 +304,7 @@ function Products() {
                 onClick={() => {
                   setCategoryId(null);
                   setSelectedBrand(null);
+                  setSelectedPriceRange(null);
                   setSelectedSort(
                     'newest'
                   );
