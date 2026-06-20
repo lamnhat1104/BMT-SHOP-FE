@@ -240,7 +240,8 @@ function ProductDetail() {
   const displayPrice = selectedVariant ? selectedVariant.price : product.price;
   const displayStock = selectedVariant ? selectedVariant.stock : product.stock;
 
-  const averageRating = reviews.length > 0 ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length : 0;
+  const ratedReviews = (reviews || []).filter(r => r.rating != null && r.rating > 0);
+  const averageRating = ratedReviews.length > 0 ? ratedReviews.reduce((acc, curr) => acc + curr.rating, 0) / ratedReviews.length : 0;
 
   // Xác định các loại thuộc tính biến thể hiện có
   const hasSizes = product.variants && product.variants.some(v => v.size);
@@ -334,7 +335,7 @@ function ProductDetail() {
                 <span key={star} style={{ color: star <= Math.round(averageRating) ? '#ffb800' : '#e0e0e0' }}>★</span>
               ))}
             </span>
-            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>({reviews.length} đánh giá)</span>
+            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>({ratedReviews.length} đánh giá)</span>
           </div>
 
           <div className="product-price-stock" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px' }}>
@@ -492,26 +493,23 @@ function ProductDetail() {
           >
             Thông Số Kỹ Thuật
           </h3>
-            <h3 
-            onClick={() => setActiveTab('reviews')}
-            style={{ 
-              color: activeTab === 'reviews' ? 'var(--primary-color)' : 'var(--text-light)', 
-              borderBottom: activeTab === 'reviews' ? '3px solid var(--primary-color)' : 'none', 
-              paddingBottom: '15px', 
-              marginBottom: '-16px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Đánh Giá ({reviews.length})
-          </h3>
+
         </div>
         <div className="tab-content" style={{ lineHeight: 1.8 }}>
           {activeTab === 'description' && hasDescription && (
             <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
           )}
           {activeTab === 'specs' && renderSpecs()}
-          {activeTab === 'reviews' && renderReviews()}
+
         </div>
+      </div>
+      
+      {/* Reviews Section at the bottom */}
+      <div className="product-reviews-container" style={{ marginTop: '50px', backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '12px' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '30px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
+          Đánh Giá & Bình Luận ({reviews.length})
+        </h2>
+        {renderReviews()}
       </div>
     </div>
   );
