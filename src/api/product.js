@@ -7,6 +7,8 @@ export const productApi = {
     if (params.brand) query.append('brand', params.brand);
     if (params.categoryId) query.append('categoryId', params.categoryId);
     if (params.showHidden !== undefined) query.append('showHidden', params.showHidden);
+    if (params.minPrice !== undefined && params.minPrice !== null) query.append('minPrice', params.minPrice);
+    if (params.maxPrice !== undefined && params.maxPrice !== null) query.append('maxPrice', params.maxPrice);
     
     const queryString = query.toString();
     return fetchData(`/products${queryString ? '?' + queryString : ''}`, {

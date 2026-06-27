@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
+import { reviewApi } from '../api/review';
+import ReviewSection from '../components/ReviewSection';
+import { optimizeCloudinaryUrl } from '../utils/cloudinary';
 function ProductDetail() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -14,6 +17,7 @@ function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedWeight, setSelectedWeight] = useState('');
   const [activeTab, setActiveTab] = useState('description');
+  const [reviews, setReviews] = useState([]);
 
   const hasDescription = useMemo(() => {
     if (!product || !product.description) return false;
@@ -49,6 +53,12 @@ function ProductDetail() {
             setSelectedSize(defaultVar.size || '');
             setSelectedWeight(defaultVar.weight || '');
           }
+          try {
+            const reviewData = await reviewApi.getProductReviews(id);
+            setReviews(reviewData);
+          } catch (e) {
+            console.error("Error fetching reviews", e);
+          }
         }
       } catch (err) {
         setError(err.message || 'Lỗi tải chi tiết sản phẩm');
@@ -58,6 +68,17 @@ function ProductDetail() {
     };
     fetchProduct();
   }, [id]);
+
+  const refreshReviews = async () => {
+    if (product) {
+      try {
+        const reviewData = await reviewApi.getProductReviews(product.id);
+        setReviews(reviewData);
+      } catch (e) {
+        console.error("Error fetching reviews", e);
+      }
+    }
+  };
 
   const uniqueColors = useMemo(() => {
     if (!product || !product.variants) return [];
@@ -220,6 +241,9 @@ function ProductDetail() {
   const displayPrice = selectedVariant ? selectedVariant.price : product.price;
   const displayStock = selectedVariant ? selectedVariant.stock : product.stock;
 
+  const ratedReviews = (reviews || []).filter(r => r.rating != null && r.rating > 0);
+  const averageRating = ratedReviews.length > 0 ? ratedReviews.reduce((acc, curr) => acc + curr.rating, 0) / ratedReviews.length : 0;
+
   // Xác định các loại thuộc tính biến thể hiện có
   const hasSizes = product.variants && product.variants.some(v => v.size);
   const hasWeights = product.variants && product.variants.some(v => v.weight);
@@ -253,23 +277,7 @@ function ProductDetail() {
   };
 
   const renderReviews = () => {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {[
-          { author: "Nguyễn Văn Hùng", rating: 5, date: "02/06/2026", comment: "Sản phẩm chính hãng chất lượng cực kỳ tốt. Vợt căng đều, đánh êm tay." },
-          { author: "Trần Thị Lan", rating: 5, date: "28/05/2026", comment: "Giày đi vừa vặn, bám sân rất tốt. Shop tư vấn nhiệt tình, ship nhanh." }
-        ].map((rev, idx) => (
-          <div key={idx} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong>{rev.author}</strong>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>{rev.date}</span>
-            </div>
-            <div style={{ color: '#ffb800', marginBottom: '8px' }}>{"★".repeat(rev.rating)}</div>
-            <p style={{ margin: 0, color: 'var(--text-dark)' }}>{rev.comment}</p>
-          </div>
-        ))}
-      </div>
-    );
+    return <ReviewSection reviews={reviews} productId={product?.id} onReviewAdded={refreshReviews} />;
   };
 
   return (
@@ -282,7 +290,7 @@ function ProductDetail() {
         {/* Product Images */}
         <div className="product-images" style={{ flex: 1 }}>
           <div className="main-image" style={{ border: '1px solid #eaeaea', borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'center', backgroundColor: '#fcfcfc', minHeight: '350px', alignItems: 'center' }}>
-            <img src={activeImg} alt={name} style={{ width: '100%', maxHeight: '350px', objectFit: 'contain' }} />
+            <img src={optimizeCloudinaryUrl(activeImg, 800)} alt={name} style={{ width: '100%', maxHeight: '350px', objectFit: 'contain' }} />
           </div>
           <div className="thumbnail-list" style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
             {filteredImages && filteredImages.length > 0 ? (
@@ -303,7 +311,7 @@ function ProductDetail() {
                     boxShadow: activeImg === imgObj.imageUrl ? '0 2px 8px rgba(244,121,32,0.2)' : 'none'
                   }}
                 >
-                  <img src={imgObj.imageUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={optimizeCloudinaryUrl(imgObj.imageUrl, 150)} alt="thumb" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               ))
             ) : (
@@ -311,7 +319,7 @@ function ProductDetail() {
                 className="thumbnail active"
                 style={{ width: '80px', height: '80px', border: '2px solid var(--primary-color)', borderRadius: '8px', padding: '5px', backgroundColor: '#fcfcfc' }}
               >
-                <img src={activeImg} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img src={optimizeCloudinaryUrl(activeImg, 150)} alt="thumb" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
             )}
           </div>
@@ -323,8 +331,12 @@ function ProductDetail() {
           <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '20px', lineHeight: 1.3 }}>{name}</h1>
           
           <div className="product-rating" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            <span style={{ color: '#ffb800' }}>★★★★★</span>
-            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>(5 đánh giá) | Đã bán 12</span>
+            <span style={{ color: '#ffb800' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star} style={{ color: star <= Math.round(averageRating) ? '#ffb800' : '#e0e0e0' }}>★</span>
+              ))}
+            </span>
+            <span style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>({ratedReviews.length} đánh giá)</span>
           </div>
 
           <div className="product-price-stock" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px' }}>
@@ -482,26 +494,23 @@ function ProductDetail() {
           >
             Thông Số Kỹ Thuật
           </h3>
-          <h3 
-            onClick={() => setActiveTab('reviews')}
-            style={{ 
-              color: activeTab === 'reviews' ? 'var(--primary-color)' : 'var(--text-light)', 
-              borderBottom: activeTab === 'reviews' ? '3px solid var(--primary-color)' : 'none', 
-              paddingBottom: '15px', 
-              marginBottom: '-16px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Đánh Giá (5)
-          </h3>
+
         </div>
         <div className="tab-content" style={{ lineHeight: 1.8 }}>
           {activeTab === 'description' && hasDescription && (
             <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
           )}
           {activeTab === 'specs' && renderSpecs()}
-          {activeTab === 'reviews' && renderReviews()}
+
         </div>
+      </div>
+      
+      {/* Reviews Section at the bottom */}
+      <div className="product-reviews-container" style={{ marginTop: '50px', backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '12px' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '30px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
+          Đánh Giá & Bình Luận ({reviews.length})
+        </h2>
+        {renderReviews()}
       </div>
     </div>
   );
