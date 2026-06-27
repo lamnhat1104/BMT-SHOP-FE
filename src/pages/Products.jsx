@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
+import { optimizeCloudinaryUrl } from '../utils/cloudinary';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -374,9 +375,10 @@ function Products() {
                     <Link to={`/products/${p.id}`} className="product-card-link">
                       <div className="product-image-wrapper">
                         <img
-                          src={p.imageUrl || '/racket_product_1.png'}
+                          src={optimizeCloudinaryUrl(p.imageUrl || '/racket_product_1.png', 500)}
                           alt={p.name}
                           className="product-image"
+                          loading="lazy"
                         />
                       </div>
                       <div className="product-brand">{p.brand || 'CHÍNH HÃNG'}</div>

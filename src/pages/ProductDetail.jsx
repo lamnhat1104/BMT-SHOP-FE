@@ -4,6 +4,7 @@ import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
 import { reviewApi } from '../api/review';
 import ReviewSection from '../components/ReviewSection';
+import { optimizeCloudinaryUrl } from '../utils/cloudinary';
 function ProductDetail() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -289,7 +290,7 @@ function ProductDetail() {
         {/* Product Images */}
         <div className="product-images" style={{ flex: 1 }}>
           <div className="main-image" style={{ border: '1px solid #eaeaea', borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'center', backgroundColor: '#fcfcfc', minHeight: '350px', alignItems: 'center' }}>
-            <img src={activeImg} alt={name} style={{ width: '100%', maxHeight: '350px', objectFit: 'contain' }} />
+            <img src={optimizeCloudinaryUrl(activeImg, 800)} alt={name} style={{ width: '100%', maxHeight: '350px', objectFit: 'contain' }} />
           </div>
           <div className="thumbnail-list" style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
             {filteredImages && filteredImages.length > 0 ? (
@@ -310,7 +311,7 @@ function ProductDetail() {
                     boxShadow: activeImg === imgObj.imageUrl ? '0 2px 8px rgba(244,121,32,0.2)' : 'none'
                   }}
                 >
-                  <img src={imgObj.imageUrl} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={optimizeCloudinaryUrl(imgObj.imageUrl, 150)} alt="thumb" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
               ))
             ) : (
@@ -318,7 +319,7 @@ function ProductDetail() {
                 className="thumbnail active"
                 style={{ width: '80px', height: '80px', border: '2px solid var(--primary-color)', borderRadius: '8px', padding: '5px', backgroundColor: '#fcfcfc' }}
               >
-                <img src={activeImg} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img src={optimizeCloudinaryUrl(activeImg, 150)} alt="thumb" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
             )}
           </div>

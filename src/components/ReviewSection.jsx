@@ -208,15 +208,18 @@ const ReviewSection = ({ reviews, productId, onReviewAdded }) => {
                             {/* Images */}
                             {review.imageUrls && review.imageUrls.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-4">
-                                    {review.imageUrls.map((url, idx) => (
-                                        <a key={idx} href={`http://localhost:8080${url}`} target="_blank" rel="noreferrer">
-                                            <img 
-                                                src={`http://localhost:8080${url}`} 
-                                                alt={`review img ${idx}`} 
-                                                className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity" 
-                                            />
-                                        </a>
-                                    ))}
+                                    {review.imageUrls.map((url, idx) => {
+                                        const imageUrl = url.startsWith('http') ? url : `http://localhost:8080${url}`;
+                                        return (
+                                            <a key={idx} href={imageUrl} target="_blank" rel="noreferrer">
+                                                <img 
+                                                    src={imageUrl} 
+                                                    alt={`review img ${idx}`} 
+                                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity" 
+                                                />
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             )}
 

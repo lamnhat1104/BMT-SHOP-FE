@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { cartApi } from '../api/cart';
+import { optimizeCloudinaryUrl } from '../utils/cloudinary';
 
 function Home() {
   const hotProducts = [
@@ -148,7 +149,7 @@ function Home() {
               {p.tag && <div className="product-badge" style={{ backgroundColor: p.tag.includes('%') ? '#ff3b30' : '#ffb800' }}>{p.tag}</div>}
               <Link to={`/products/${p.id}`} className="product-card-link">
                 <div className="product-image-wrapper">
-                  <img src={p.thumbnail} alt={p.name} className="product-image" style={p.style} />
+                  <img src={optimizeCloudinaryUrl(p.thumbnail, 500)} alt={p.name} className="product-image" loading="lazy" style={p.style} />
                 </div>
                 <div className="product-brand">{p.brand}</div>
                 <h3 className="product-title">{p.name}</h3>
