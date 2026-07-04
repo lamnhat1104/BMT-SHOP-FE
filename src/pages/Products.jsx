@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
 import { optimizeCloudinaryUrl } from '../utils/cloudinary';
@@ -13,13 +13,17 @@ function Products() {
   const [selectedSort, setSelectedSort] = useState('newest');
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
 
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const keyword = searchParams.get('keyword');
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 8;
 
   useEffect(() => {
     fetchProducts();
-  }, [categoryId, selectedBrand, selectedSort, selectedPriceRange]);
+  }, [categoryId, selectedBrand, selectedSort, selectedPriceRange, keyword]);
 
   const fetchProducts = async () => {
     try {
@@ -30,7 +34,8 @@ function Products() {
         brand: selectedBrand,
         sort: selectedSort,
         minPrice: selectedPriceRange?.min,
-        maxPrice: selectedPriceRange?.max
+        maxPrice: selectedPriceRange?.max,
+        keyword: keyword
       });
 
       setProducts(data);
@@ -90,8 +95,14 @@ function Products() {
         }}
       >
         <Link to="/">Trang chủ</Link> {'>'}
-        <span> Vợt Cầu Lông </span> {'>'}
-        <span> Vợt cầu lông Yonex</span>
+        {keyword ? (
+          <span> Kết quả tìm kiếm cho "{keyword}"</span>
+        ) : (
+          <>
+            <span> Vợt Cầu Lông </span> {'>'}
+            <span> Tất cả sản phẩm</span>
+          </>
+        )}
       </div>
 
       <div
@@ -240,40 +251,42 @@ function Products() {
 
         {/* PRODUCTS */}
         <div style={{ flex: 1 }}>
-          {/* Brand Banner */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(3, 1fr)',
-              gap: '15px',
-              marginBottom: '25px'
-            }}
-          >
-            {[
-              'ARCSABER',
-              'NANORAY',
-              'ASTROX',
-              'NANOFLARE',
-              'DUORA',
-              'VOLTRIC'
-            ].map((item, index) => (
-              <div
-                key={index}
-                style={{
-                  border: '2px solid #ddd',
-                  padding: '18px',
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  transition: '0.3s'
-                }}
-              >
-                {item}
-              </div>
-            ))}
-          </div>
+          {/* Brand Banner (Chỉ hiện khi không tìm kiếm) */}
+          {!keyword && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(3, 1fr)',
+                gap: '15px',
+                marginBottom: '25px'
+              }}
+            >
+              {[
+                'ARCSABER',
+                'NANORAY',
+                'ASTROX',
+                'NANOFLARE',
+                'DUORA',
+                'VOLTRIC'
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  style={{
+                    border: '2px solid #ddd',
+                    padding: '18px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    transition: '0.3s'
+                  }}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Header */}
           <div
@@ -291,7 +304,7 @@ function Products() {
                 textTransform: 'uppercase'
               }}
             >
-              Vợt cầu lông Yonex
+              {keyword ? `Kết quả tìm kiếm cho: ${keyword}` : 'Tất cả sản phẩm'}
             </h2>
 
             <div
