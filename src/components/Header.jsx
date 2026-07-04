@@ -2,12 +2,69 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Headphones, MapPin, Search, Binoculars, User, ShoppingCart, ChevronDown } from 'lucide-react';
 import { cartApi } from '../api/cart';
+import { productApi } from '../api/product';
 
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState({ token: null, fullName: '' });
   const [cartCount, setCartCount] = useState(0);
+
+  // Search states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Parse keyword from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('keyword')) {
+      setSearchQuery(params.get('keyword'));
+    }
+  }, [location.search]);
+
+  // Debounce search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length > 0) {
+        setIsSearching(true);
+        try {
+          const results = await productApi.autocompleteSearch(searchQuery);
+          setSearchResults(results);
+          setShowDropdown(true);
+        } catch (error) {
+          console.error("Autocomplete error", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      setShowDropdown(false);
+      navigate(`/products?keyword=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.search-bar-container')) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     // 1. Xử lý các tham số query do Backend redirect về sau khi login OAuth2 (Social) thành công
@@ -157,11 +214,42 @@ function Header() {
             </div>
 
             {/* Middle section: Search */}
-            <div className="search-bar">
-              <input type="text" placeholder="Tìm sản phẩm..." />
-              <button>
-                <Search size={18} />
-              </button>
+            <div className="search-bar-container" style={{ position: 'relative', flex: '1', maxWidth: '600px', margin: '0 20px' }}>
+              <form onSubmit={handleSearchSubmit} className="search-bar" style={{ margin: 0, width: '100%' }}>
+                <input 
+                  type="text" 
+                  placeholder="Tìm sản phẩm..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => { if (searchQuery.trim()) setShowDropdown(true); }}
+                />
+                <button type="submit">
+                  <Search size={18} />
+                </button>
+              </form>
+              
+              {showDropdown && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 1000, marginTop: '5px', maxHeight: '400px', overflowY: 'auto' }}>
+                  {isSearching ? (
+                    <div style={{ padding: '15px', textAlign: 'center', color: '#666' }}>Đang tìm kiếm...</div>
+                  ) : searchResults.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {searchResults.map(product => (
+                        <div key={product.id} onClick={() => { setShowDropdown(false); navigate(`/product/${product.id}`); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 15px', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <img src={product.imageUrl || '/racket_product_1.png'} alt={product.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#f47920', fontWeight: 'bold' }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}</div>
+                          </div>
+                        </div>
+                      ))}
+                      <div onClick={handleSearchSubmit} style={{ padding: '10px', textAlign: 'center', fontSize: '0.9rem', color: '#f47920', cursor: 'pointer', fontWeight: 'bold', backgroundColor: '#fff9f5' }}>Xem tất cả kết quả</div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '15px', textAlign: 'center', color: '#666' }}>Không tìm thấy sản phẩm nào</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right section: Actions */}

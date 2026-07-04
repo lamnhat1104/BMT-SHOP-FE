@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
+import AiChatbot from './AiChatbot';
 
 function ChatWidget() {
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const zaloPhone = '0977508430'; // Số hotline từ Header
   const zaloUrl = `https://zalo.me/${zaloPhone}`;
   const messengerUrl = 'https://www.facebook.com/profile.php?id=61590785572965'; // Link Facebook cá nhân/trang của người dùng
 
   return (
     <>
+      <AiChatbot isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} />
+      
       <div className="floating-chat-container">
+        {/* AI Chat Button */}
+        <button 
+          onClick={() => setIsAiOpen(!isAiOpen)}
+          className="chat-btn ai-btn"
+          aria-label="Chat với AI"
+        >
+          <div className="ai-icon-inner">🤖</div>
+          <span className="chat-tooltip">Chat với AI</span>
+        </button>
+
         {/* Messenger Button */}
         <a 
           href={messengerUrl} 
@@ -81,6 +95,14 @@ function ChatWidget() {
           animation-delay: 0.4s;
         }
 
+        .ai-btn {
+          animation-delay: 0.6s;
+        }
+        
+        .ai-icon-inner {
+          font-size: 28px;
+        }
+
         .chat-icon {
           width: 34px;
           height: 34px;
@@ -105,6 +127,10 @@ function ChatWidget() {
           box-shadow: 0 0 0 0 rgba(166, 44, 255, 0.4);
         }
 
+        .ai-btn::after {
+          box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4);
+        }
+
         /* Set infinite pulse triggers */
         .zalo-btn {
           animation: floatIn 0.8s ease-out both, zaloPulse 2s infinite;
@@ -114,6 +140,11 @@ function ChatWidget() {
         .messenger-btn {
           animation: floatIn 0.8s ease-out both, messengerPulse 2s infinite;
           animation-delay: 0.2s, 1.5s;
+        }
+
+        .ai-btn {
+          animation: floatIn 0.8s ease-out both, aiPulse 2s infinite;
+          animation-delay: 0.6s, 2s;
         }
 
         /* Hover effects */
@@ -195,6 +226,18 @@ function ChatWidget() {
           }
           100% {
             box-shadow: 0 4px 16px rgba(166, 44, 255, 0.2), 0 0 0 0 rgba(166, 44, 255, 0);
+          }
+        }
+
+        @keyframes aiPulse {
+          0% {
+            box-shadow: 0 4px 16px rgba(0, 200, 83, 0.2), 0 0 0 0 rgba(0, 200, 83, 0.4);
+          }
+          70% {
+            box-shadow: 0 4px 16px rgba(0, 200, 83, 0.2), 0 0 0 10px rgba(0, 200, 83, 0);
+          }
+          100% {
+            box-shadow: 0 4px 16px rgba(0, 200, 83, 0.2), 0 0 0 0 rgba(0, 200, 83, 0);
           }
         }
       `}</style>

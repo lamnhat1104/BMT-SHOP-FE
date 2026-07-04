@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { cartApi } from '../api/cart';
 import { authApi } from '../api/auth';
 import { orderApi } from '../api/order';
+import { couponApi } from '../api/coupon';
 import { CheckCircle2, QrCode, CreditCard, ShoppingBag, Truck, MapPin, User, Phone, FileText } from 'lucide-react';
 
 function Checkout() {
@@ -22,6 +23,14 @@ function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   // 1. Guard check & load data
   useEffect(() => {
@@ -99,7 +108,45 @@ function Checkout() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingFee = 0; // Miễn phí vận chuyển
-  const totalAmount = subtotal + shippingFee;
+  const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsApplyingCoupon(true);
+    setCouponError('');
+    setCouponSuccess('');
+    
+    try {
+      const res = await couponApi.applyCoupon({
+        code: couponCode.trim(),
+        cartTotal: subtotal
+      });
+      
+      if (res.isValid) {
+        console.log("Apply coupon success", res);
+        setAppliedCoupon(res.coupon);
+        setDiscountAmount(res.discountAmount);
+        setCouponSuccess(res.message);
+      } else {
+        console.log("Apply coupon failed", res);
+        setCouponError(res.message);
+        setAppliedCoupon(null);
+        setDiscountAmount(0);
+      }
+    } catch (err) {
+      setCouponError(err.message || 'Lỗi áp dụng mã giảm giá');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+    setCouponError('');
+    setCouponSuccess('');
+  };
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
@@ -127,7 +174,8 @@ function Checkout() {
         phone: profile.phone.trim(),
         address: profile.address.trim(),
         notes: profile.notes.trim(),
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        couponCode: appliedCoupon ? appliedCoupon.code : null
       };
 
       const result = await orderApi.createOrder(orderPayload);
@@ -423,6 +471,40 @@ function Checkout() {
               ))}
             </div>
 
+            {/* Coupon Input */}
+            <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Mã giảm giá (nếu có)" 
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                  disabled={appliedCoupon != null}
+                  style={{ flex: 1, padding: '10px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none' }}
+                />
+                {appliedCoupon ? (
+                  <button 
+                    type="button" 
+                    onClick={handleRemoveCoupon}
+                    style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    HỦY
+                  </button>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={handleApplyCoupon}
+                    disabled={isApplyingCoupon || !couponCode.trim()}
+                    style={{ padding: '10px 20px', backgroundColor: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', opacity: (isApplyingCoupon || !couponCode.trim()) ? 0.7 : 1 }}
+                  >
+                    {isApplyingCoupon ? '...' : 'ÁP DỤNG'}
+                  </button>
+                )}
+              </div>
+              {couponError && <p style={{ color: '#d32f2f', fontSize: '0.85rem', margin: '8px 0 0 0' }}>{couponError}</p>}
+              {couponSuccess && <p style={{ color: '#2e7d32', fontSize: '0.85rem', margin: '8px 0 0 0' }}>{couponSuccess}</p>}
+            </div>
+
             {/* Calculations */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '25px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
@@ -433,6 +515,12 @@ function Checkout() {
                 <span style={{ color: 'var(--text-light)' }}>Phí vận chuyển</span>
                 <strong style={{ color: '#4caf50' }}>Miễn phí</strong>
               </div>
+              {discountAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                  <span style={{ color: 'var(--text-light)' }}>Giảm giá {appliedCoupon && `(${appliedCoupon.code})`}</span>
+                  <strong style={{ color: '#d32f2f' }}>-{formatPrice(discountAmount)}</strong>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', borderTop: '1px solid var(--border-color)', paddingTop: '15px', marginTop: '5px' }}>
                 <span style={{ fontWeight: '700' }}>Tổng cộng</span>
                 <strong style={{ fontWeight: '800', color: '#ff3b30', fontSize: '1.3rem' }}>{formatPrice(totalAmount)}</strong>

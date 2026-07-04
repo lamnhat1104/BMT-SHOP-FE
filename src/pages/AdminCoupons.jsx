@@ -27,7 +27,11 @@ function AdminCoupons() {
   // Form states
   const [formData, setFormData] = useState({
     code: '',
-    discountPercent: '',
+    discountType: 'PERCENTAGE',
+    discountValue: '',
+    minOrderValue: '',
+    maxDiscountAmount: '',
+    maxUses: '',
     expiredAt: '',
     isActive: 'true'
   });
@@ -82,11 +86,11 @@ function AdminCoupons() {
       errors.code = 'Mã khuyến mãi không được chứa khoảng trắng';
     }
 
-    const discount = parseInt(formData.discountPercent, 10);
+    const discount = parseFloat(formData.discountValue);
     if (isNaN(discount)) {
-      errors.discountPercent = 'Mức giảm giá không được để trống';
-    } else if (discount < 1 || discount > 100) {
-      errors.discountPercent = 'Mức giảm giá phải từ 1% đến 100%';
+      errors.discountValue = 'Mức giảm giá không được để trống';
+    } else if (discount <= 0) {
+      errors.discountValue = 'Mức giảm giá phải lớn hơn 0';
     }
 
     if (!formData.expiredAt) {
@@ -107,7 +111,11 @@ function AdminCoupons() {
     setSelectedCoupon(null);
     setFormData({
       code: '',
-      discountPercent: '',
+      discountType: 'PERCENTAGE',
+      discountValue: '',
+      minOrderValue: '',
+      maxDiscountAmount: '',
+      maxUses: '',
       expiredAt: '',
       isActive: 'true'
     });
@@ -120,7 +128,11 @@ function AdminCoupons() {
     setSelectedCoupon(coupon);
     setFormData({
       code: coupon.code,
-      discountPercent: String(coupon.discountPercent),
+      discountType: coupon.discountType || 'PERCENTAGE',
+      discountValue: String(coupon.discountValue || ''),
+      minOrderValue: coupon.minOrderValue ? String(coupon.minOrderValue) : '',
+      maxDiscountAmount: coupon.maxDiscountAmount ? String(coupon.maxDiscountAmount) : '',
+      maxUses: coupon.maxUses ? String(coupon.maxUses) : '',
       expiredAt: formatDateTimeLocal(coupon.expiredAt),
       isActive: String(coupon.isActive)
     });
@@ -134,7 +146,11 @@ function AdminCoupons() {
 
     const requestData = {
       code: formData.code.trim().toUpperCase(),
-      discountPercent: parseInt(formData.discountPercent, 10),
+      discountType: formData.discountType,
+      discountValue: parseFloat(formData.discountValue),
+      minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : null,
+      maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : null,
+      maxUses: formData.maxUses ? parseInt(formData.maxUses, 10) : null,
       expiredAt: new Date(formData.expiredAt).toISOString(),
       isActive: formData.isActive === 'true'
     };
@@ -212,11 +228,23 @@ function AdminCoupons() {
       )
     },
     {
-      header: 'Mức giảm giá',
+      header: 'Loại / Mức giảm',
       render: (row) => (
-        <div className="font-bold text-slate-800 flex items-center gap-1.5">
-          <Percent size={15} className="text-emerald-500" />
-          <span>{row.discountPercent}%</span>
+        <div className="font-bold text-slate-800 flex flex-col gap-1 text-sm">
+          <span className="text-emerald-600">
+            {row.discountType === 'PERCENTAGE' && `${row.discountValue}%`}
+            {row.discountType === 'FIXED_AMOUNT' && `${row.discountValue.toLocaleString()}đ`}
+            {row.discountType === 'FREE_SHIPPING' && `Miễn phí vận chuyển (Tối đa ${row.discountValue.toLocaleString()}đ)`}
+          </span>
+          {row.minOrderValue && <span className="text-xs text-slate-500 font-normal">Đơn từ: {row.minOrderValue.toLocaleString()}đ</span>}
+        </div>
+      )
+    },
+    {
+      header: 'Đã dùng / Tối đa',
+      render: (row) => (
+        <div className="text-slate-600 text-sm">
+          {row.usedCount || 0} / {row.maxUses ? row.maxUses : '∞'}
         </div>
       )
     },
@@ -375,15 +403,55 @@ function AdminCoupons() {
           />
 
           <AdminInput 
-            label="Mức giảm giá (%)" 
+            label="Loại giảm giá" 
+            type="select"
+            value={formData.discountType}
+            onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value }))}
+            options={[
+              { value: 'PERCENTAGE', label: 'Giảm theo phần trăm (%)' },
+              { value: 'FIXED_AMOUNT', label: 'Giảm số tiền cố định (đ)' },
+              { value: 'FREE_SHIPPING', label: 'Miễn phí vận chuyển' }
+            ]}
+          />
+
+          <AdminInput 
+            label={formData.discountType === 'PERCENTAGE' ? "Mức giảm giá (%)" : "Số tiền giảm (đ)"}
             type="number"
-            placeholder="Ví dụ: 10, 20, 50..."
-            min="1"
-            max="100"
-            value={formData.discountPercent}
-            onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: e.target.value }))}
-            error={formErrors.discountPercent}
+            placeholder={formData.discountType === 'PERCENTAGE' ? "Ví dụ: 10, 20..." : "Ví dụ: 50000, 100000..."}
+            min="0"
+            value={formData.discountValue}
+            onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
+            error={formErrors.discountValue}
             required
+          />
+
+          {formData.discountType === 'PERCENTAGE' && (
+            <AdminInput 
+              label="Số tiền giảm tối đa (đ) (Tùy chọn)" 
+              type="number"
+              placeholder="Ví dụ: 100000"
+              min="0"
+              value={formData.maxDiscountAmount}
+              onChange={(e) => setFormData(prev => ({ ...prev, maxDiscountAmount: e.target.value }))}
+            />
+          )}
+
+          <AdminInput 
+            label="Giá trị đơn hàng tối thiểu (đ) (Tùy chọn)" 
+            type="number"
+            placeholder="Ví dụ: 200000"
+            min="0"
+            value={formData.minOrderValue}
+            onChange={(e) => setFormData(prev => ({ ...prev, minOrderValue: e.target.value }))}
+          />
+
+          <AdminInput 
+            label="Số lần sử dụng tối đa (Tùy chọn)" 
+            type="number"
+            placeholder="Ví dụ: 100"
+            min="1"
+            value={formData.maxUses}
+            onChange={(e) => setFormData(prev => ({ ...prev, maxUses: e.target.value }))}
           />
 
           <AdminInput 

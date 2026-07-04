@@ -34,5 +34,12 @@ export const couponApi = {
     return fetchData(`/coupons/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  applyCoupon: async (payload) => {
+    return fetchData('/coupons/apply', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };
