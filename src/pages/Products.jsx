@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
 import { optimizeCloudinaryUrl } from '../utils/cloudinary';
+import ProductCard from '../components/ProductCard';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -379,38 +380,7 @@ function Products() {
                 }}
               >
                 {currentProducts.map((p) => (
-                  <div className="product-card" key={p.id}>
-                    {/* Badge */}
-                    <div className="product-badge">
-                      CHÍNH HÃNG
-                    </div>
-
-                    <Link to={`/products/${p.id}`} className="product-card-link">
-                      <div className="product-image-wrapper">
-                        <img
-                          src={optimizeCloudinaryUrl(p.imageUrl || '/racket_product_1.png', 500)}
-                          alt={p.name}
-                          className="product-image"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="product-brand">{p.brand || 'CHÍNH HÃNG'}</div>
-                      <h3 className="product-title">{p.name}</h3>
-                      <div className="product-price">
-                        <span className="price-current">{formatPrice(p.price)}</span>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleAddToCart(e, p);
-                      }}
-                      className="btn-add-to-cart"
-                    >
-                      Thêm vào giỏ
-                    </button>
-                  </div>
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
 

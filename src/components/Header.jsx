@@ -115,7 +115,7 @@ function Header() {
         try {
           const cart = await cartApi.getCart();
           const items = Array.isArray(cart) ? cart : [];
-          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          const total = items.length;
           setCartCount(total);
         } catch (err) {
           console.error('Lỗi lấy số lượng giỏ hàng:', err);
@@ -126,7 +126,7 @@ function Header() {
           const localCart = localStorage.getItem('cart');
           const cart = localCart ? JSON.parse(localCart) : [];
           const items = Array.isArray(cart) ? cart : [];
-          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          const total = items.length;
           setCartCount(total);
         } catch (err) {
           console.error('Lỗi phân tích giỏ hàng local:', err);
