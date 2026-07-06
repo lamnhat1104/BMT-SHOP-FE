@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { Search, UserPlus, Edit2, ShieldAlert, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Edit2, ShieldAlert, CheckCircle2, AlertCircle, Trash2, Key } from 'lucide-react';
 import AdminHeader from '../components/admin/AdminHeader';
 import AdminTable from '../components/admin/AdminTable';
 import AdminButton from '../components/admin/AdminButton';
@@ -36,6 +36,12 @@ function AdminUsers() {
   });
   const [formErrors, setFormErrors] = useState({});
   const [actionFeedback, setActionFeedback] = useState({ text: '', type: '' });
+
+  // Reset password states
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetUser, setResetUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetError, setResetError] = useState('');
 
   // Load initial users
   const loadUsers = async () => {
@@ -104,6 +110,33 @@ function AdminUsers() {
     setIsModalOpen(true);
   };
 
+  const handleOpenResetModal = (user) => {
+    setResetUser(user);
+    setNewPassword('');
+    setResetError('');
+    setIsResetModalOpen(true);
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPassword.trim()) {
+      setResetError('Mật khẩu mới không được để trống');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setResetError('Mật khẩu phải có độ dài từ 6 ký tự trở lên');
+      return;
+    }
+
+    try {
+      await adminApi.resetPassword(resetUser.userId, newPassword.trim());
+      showFeedback(`Đặt lại mật khẩu cho ${resetUser.fullName} thành công!`, 'success');
+      setIsResetModalOpen(false);
+    } catch (err) {
+      setResetError(err.message || 'Đặt lại mật khẩu thất bại!');
+    }
+  };
+
   // Submit create or edit form
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,6 +161,13 @@ function AdminUsers() {
         setUsers(prev => [...prev, newUser]);
         showFeedback('Thêm thành viên mới thành công!', 'success');
       } else {
+        // Check duplication for update
+        const duplicate = users.find(u => u.userId !== selectedUser.userId && u.email.toLowerCase() === formData.email.toLowerCase().trim());
+        if (duplicate) {
+          setFormErrors({ email: 'Email này đã tồn tại trên hệ thống' });
+          return;
+        }
+
         const updated = await adminApi.updateUser(selectedUser.userId, {
           fullName: formData.fullName.trim(),
           email: formData.email.trim(),
@@ -258,6 +298,14 @@ function AdminUsers() {
             title="Chỉnh sửa thông tin"
           >
             <Edit2 size={13} /> Sửa
+          </AdminButton>
+
+          <AdminButton 
+            variant="secondary" 
+            onClick={() => handleOpenResetModal(row)}
+            title="Đặt lại mật khẩu"
+          >
+            <Key size={13} /> Reset Pass
           </AdminButton>
           
           <AdminButton 
@@ -400,7 +448,6 @@ function AdminUsers() {
             value={formData.email}
             onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
             error={formErrors.email}
-            disabled={modalType === 'edit'} // Không cho sửa email khi cập nhật
             required
           />
 
@@ -442,6 +489,42 @@ function AdminUsers() {
             </AdminButton>
             <AdminButton type="submit">
               {modalType === 'create' ? 'Tạo tài khoản' : 'Lưu thay đổi'}
+            </AdminButton>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* Reset Password Modal */}
+      <AdminModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        title={`Đặt lại mật khẩu cho: ${resetUser?.fullName || ''}`}
+      >
+        <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+          <p className="text-xs text-slate-500">
+            Đặt lại mật khẩu cho thành viên với email <strong>{resetUser?.email}</strong>.
+          </p>
+
+          <AdminInput 
+            label="Mật khẩu mới" 
+            type="password"
+            placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)..."
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            error={resetError}
+            required
+          />
+
+          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <AdminButton 
+              type="button" 
+              variant="secondary" 
+              onClick={() => setIsResetModalOpen(false)}
+            >
+              Hủy
+            </AdminButton>
+            <AdminButton type="submit">
+              Xác nhận đặt lại
             </AdminButton>
           </div>
         </form>
