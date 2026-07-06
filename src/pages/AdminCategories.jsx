@@ -7,6 +7,7 @@ import AdminButton from '../components/admin/AdminButton';
 import AdminInput from '../components/admin/AdminInput';
 import AdminModal from '../components/admin/AdminModal';
 import { categoryApi } from '../api/category';
+import { uploadImage } from '../api/config';
 
 function AdminCategories() {
   const { onMenuToggle } = useOutletContext();
@@ -17,6 +18,8 @@ function AdminCategories() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState('id'); // 'name', 'id'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc', 'desc'
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,6 +33,22 @@ function AdminCategories() {
   });
   const [formErrors, setFormErrors] = useState({});
   const [actionFeedback, setActionFeedback] = useState({ text: '', type: '' });
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const url = await uploadImage(file);
+      setFormData(prev => ({ ...prev, image: url }));
+      showFeedback('Tải hình ảnh lên thành công!', 'success');
+    } catch (err) {
+      showFeedback(err.message || 'Lỗi tải ảnh', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [categoryToToggle, setCategoryToToggle] = useState(null);
@@ -132,19 +151,49 @@ function AdminCategories() {
 
   // Filter logic
   const filteredCategories = categories.filter(category => {
-    return category.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    return (category.name || '').toLowerCase().includes(searchQuery.toLowerCase().trim());
   });
+
+  const sortedCategories = [...filteredCategories].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'name') {
+      comparison = (a.name || '').localeCompare(b.name || '');
+    } else if (sortField === 'id') {
+      comparison = (a.id || 0) - (b.id || 0);
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
+  });
+
+  const resolveCategoryImage = (image) => {
+    if (!image) return '/racket_category.png';
+    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('/')) {
+      return image;
+    }
+    const defaultMapping = {
+      'racket.png': '/racket_product_1.png',
+      'shoes.png': '/shoe_product_1.png',
+      'shirt.png': '/shoe_product_1.png',
+      'shorts.png': '/shoe_product_1.png',
+      'shuttlecock.png': '/racket_product_1.png',
+      'bag.png': '/racket_product_1.png',
+      'string.png': '/racket_product_1.png',
+      'grip.png': '/racket_product_1.png',
+      'accessory.png': '/racket_product_1.png'
+    };
+    return defaultMapping[image] || `/${image}`;
+  };
 
   const columns = [
     {
       header: 'Ảnh đại diện',
       render: (row) => (
         <img 
-          src={row.image || '/racket_category.png'} 
+          src={resolveCategoryImage(row.image)} 
           alt={row.name}
           className="w-12 h-12 object-contain rounded-lg border border-slate-100 bg-slate-50"
           onError={(e) => {
             e.target.onerror = null;
+            e.target.src = '/racket_category.png';
           }}
         />
       )
@@ -244,15 +293,32 @@ function AdminCategories() {
           />
         </div>
 
-        <AdminButton onClick={handleOpenCreateModal}>
-          <Plus size={15} /> Thêm danh mục
-        </AdminButton>
+        <div className="flex gap-4 items-center">
+          <select 
+            value={`${sortField}-${sortDirection}`} 
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="bg-white border border-slate-200 text-slate-750 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[#f47920] cursor-pointer transition-colors"
+          >
+            <option value="id-asc">Mã danh mục (Tăng dần)</option>
+            <option value="id-desc">Mã danh mục (Giảm dần)</option>
+            <option value="name-asc">Tên (A-Z)</option>
+            <option value="name-desc">Tên (Z-A)</option>
+          </select>
+
+          <AdminButton onClick={handleOpenCreateModal}>
+            <Plus size={15} /> Thêm danh mục
+          </AdminButton>
+        </div>
       </div>
 
       {/* Main Table */}
       <AdminTable 
         columns={columns} 
-        data={filteredCategories} 
+        data={sortedCategories} 
         emptyMessage="Không tìm thấy danh mục nào khớp với bộ lọc tìm kiếm."
       />
 
@@ -272,12 +338,38 @@ function AdminCategories() {
             required
           />
 
-          <AdminInput 
-            label="Đường dẫn ảnh đại diện" 
-            placeholder="Ví dụ: /racket_category.png..."
-            value={formData.image}
-            onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700">Ảnh đại diện danh mục (Tải lên hoặc nhập URL)</label>
+            <div className="flex gap-2">
+              <input 
+                type="text"
+                placeholder="Ví dụ: /racket_category.png..."
+                value={formData.image}
+                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#f47920]"
+              />
+              <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 flex items-center justify-center cursor-pointer transition-colors shrink-0">
+                {uploading ? 'Đang tải...' : 'Tải lên'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageUpload} 
+                  disabled={uploading} 
+                  className="hidden" 
+                />
+              </label>
+            </div>
+            {formData.image && (
+              <div className="mt-2 border border-slate-100 p-2 rounded-xl bg-slate-50 inline-block">
+                <img 
+                  src={resolveCategoryImage(formData.image)} 
+                  alt="Category Preview" 
+                  className="max-h-[80px] object-contain rounded bg-white"
+                  onError={(e) => { e.target.src = '/racket_category.png'; }}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
             <AdminButton 
