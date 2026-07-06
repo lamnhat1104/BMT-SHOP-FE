@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { cartApi } from '../api/cart';
@@ -9,6 +9,14 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      setError(errorParam);
+    }
+  }, []);
 
   const syncLocalCart = async () => {
     const localCart = JSON.parse(localStorage.getItem('cart') || '[]');

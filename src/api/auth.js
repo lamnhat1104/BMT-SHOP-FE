@@ -15,6 +15,18 @@ export const authApi = {
     });
   },
 
+  checkEmailExists: async (email) => {
+    return fetchData(`/auth/check-email?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+    });
+  },
+
+  checkPhoneExists: async (phone) => {
+    return fetchData(`/auth/check-phone?phone=${encodeURIComponent(phone)}`, {
+      method: 'GET',
+    });
+  },
+
   verifyOtp: async (email, otp) => {
     return fetchData('/auth/verify-otp', {
       method: 'POST',

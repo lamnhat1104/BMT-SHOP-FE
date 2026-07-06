@@ -30,6 +30,7 @@ import AdminCoupons from './pages/AdminCoupons';
 import AdminReviews from './pages/AdminReviews';
 import AdminComplaintsPage from './pages/admin/AdminComplaintsPage';
 import MyComplaintsPage from './pages/MyComplaintsPage';
+import AdminReports from './pages/AdminReports';
 function App() {
   return (
     <Router>
@@ -63,6 +64,7 @@ function App() {
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/complaints" element={<AdminComplaintsPage />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
         </Route>
       </Routes>
     </Router>

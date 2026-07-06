@@ -141,7 +141,7 @@ function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
           </NavLink>
 
           <NavLink 
-            to="/#" 
+            to="/admin/reports" 
             className={({ isActive }) => getLinkClass(isActive)}
             onClick={onClose}
             title={collapsed ? "Báo cáo doanh thu" : undefined}

@@ -7,6 +7,7 @@ import AdminButton from '../components/admin/AdminButton';
 import AdminInput from '../components/admin/AdminInput';
 import AdminModal from '../components/admin/AdminModal';
 import { productApi } from '../api/product';
+import { uploadImage } from '../api/config';
 
 function AdminProducts() {
   const { onMenuToggle } = useOutletContext();
@@ -19,6 +20,8 @@ function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [sortField, setSortField] = useState('name'); // 'name', 'price', 'stock', 'id'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc', 'desc'
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,10 +39,13 @@ function AdminProducts() {
     imageUrl: '',
     description: '',
     status: 'available',
-    isFeatured: false
+    isFeatured: false,
+    variants: [],
+    images: []
   });
   const [formErrors, setFormErrors] = useState({});
   const [actionFeedback, setActionFeedback] = useState({ text: '', type: '' });
+  const [uploading, setUploading] = useState(false);
 
   // Map category names
   const categoryNames = {
@@ -78,6 +84,34 @@ function AdminProducts() {
     if (formData.discountPercent < 0 || formData.discountPercent > 100) {
       errors.discountPercent = 'Khuyến mãi từ 0% đến 100%';
     }
+
+    if (formData.variants && formData.variants.length > 0) {
+      const variantErrors = [];
+      formData.variants.forEach((v, index) => {
+        const vErr = {};
+        if (!v.color && !v.size) {
+          vErr.color = 'Nhập màu';
+          vErr.size = 'Nhập size';
+        }
+        
+        const priceNum = parseFloat(v.price);
+        if (v.price === '' || isNaN(priceNum) || priceNum <= 0) {
+          vErr.price = 'Giá > 0';
+        }
+        
+        const stockNum = parseInt(v.stock);
+        if (v.stock === '' || isNaN(stockNum) || stockNum < 0) {
+          vErr.stock = 'Kho >= 0';
+        }
+        
+        if (Object.keys(vErr).length > 0) {
+          variantErrors[index] = vErr;
+        }
+      });
+      if (variantErrors.some(Boolean)) {
+        errors.variants = variantErrors;
+      }
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -96,7 +130,9 @@ function AdminProducts() {
       imageUrl: '',
       description: '',
       status: 'available',
-      isFeatured: false
+      isFeatured: false,
+      variants: [],
+      images: []
     });
     setFormErrors({});
     setIsModalOpen(true);
@@ -105,6 +141,10 @@ function AdminProducts() {
   const handleOpenEditModal = (product) => {
     setModalType('edit');
     setSelectedProduct(product);
+    const existingImages = product.images && product.images.length > 0
+      ? product.images.map(img => img.imageUrl)
+      : (product.imageUrl ? [product.imageUrl] : []);
+
     setFormData({
       name: product.name,
       categoryId: product.categoryId || 1,
@@ -115,7 +155,9 @@ function AdminProducts() {
       imageUrl: product.imageUrl || '',
       description: product.description || '',
       status: product.status || 'available',
-      isFeatured: !!product.isFeatured
+      isFeatured: !!product.isFeatured,
+      variants: product.variants || [],
+      images: existingImages
     });
     setFormErrors({});
     setIsModalOpen(true);
@@ -125,6 +167,10 @@ function AdminProducts() {
     e.preventDefault();
     if (!validateForm()) return;
 
+    const requestImages = formData.images && formData.images.length > 0
+      ? formData.images.filter(Boolean)
+      : (formData.imageUrl ? [formData.imageUrl] : ['/racket_product_1.png']);
+
     const requestData = {
       name: formData.name.trim(),
       categoryId: parseInt(formData.categoryId),
@@ -132,11 +178,13 @@ function AdminProducts() {
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock),
       discountPercent: parseInt(formData.discountPercent),
-      imageUrl: formData.imageUrl.trim() || '/racket_product_1.png', // fallback default
+      imageUrl: requestImages[0] || '/racket_product_1.png',
       description: formData.description.trim(),
       status: formData.status,
       isFeatured: formData.isFeatured,
-      quantity: 1
+      quantity: 1,
+      variants: formData.variants || [],
+      images: requestImages
     };
 
     try {
@@ -196,8 +244,8 @@ function AdminProducts() {
   // Filter logic
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      (product.name || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+      (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase().trim());
     
     const matchesCategory = categoryFilter === 'ALL' || product.categoryId === parseInt(categoryFilter);
     
@@ -206,6 +254,20 @@ function AdminProducts() {
       product.status === statusFilter;
 
     return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'name') {
+      comparison = (a.name || '').localeCompare(b.name || '');
+    } else if (sortField === 'price') {
+      comparison = (a.price || 0) - (b.price || 0);
+    } else if (sortField === 'stock') {
+      comparison = (a.stock || 0) - (b.stock || 0);
+    } else if (sortField === 'id') {
+      comparison = (a.id || 0) - (b.id || 0);
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
   });
 
   const columns = [
@@ -217,6 +279,7 @@ function AdminProducts() {
           alt={row.name}
           className="w-12 h-12 object-contain rounded-lg border border-slate-100 bg-slate-50"
           onError={(e) => {
+            e.target.onerror = null;
             e.target.src = '/racket_product_1.png';
           }}
         />
@@ -224,17 +287,44 @@ function AdminProducts() {
     },
     {
       header: 'Tên Sản Phẩm',
-      render: (row) => (
-        <div className="max-w-[280px]">
-          <div className="font-bold text-slate-800 leading-tight">{row.name}</div>
-          <div className="flex gap-2 items-center mt-1">
-            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{row.brand}</span>
-            {row.isFeatured && (
-              <span className="text-[9px] bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-sm font-bold uppercase">Nổi bật</span>
+      render: (row) => {
+        const uniqueColors = Array.from(new Set((row.variants || []).map(v => v.color).filter(Boolean)));
+        const uniqueSizes = Array.from(new Set((row.variants || []).map(v => v.size).filter(Boolean)));
+
+        return (
+          <div className="max-w-[280px]">
+            <div className="font-bold text-slate-800 leading-tight">{row.name}</div>
+            <div className="flex gap-2 items-center mt-1">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{row.brand}</span>
+              {row.isFeatured && (
+                <span className="text-[9px] bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.2 rounded-sm font-bold uppercase">Nổi bật</span>
+              )}
+            </div>
+
+            {/* Display Variants (Colors/Sizes) */}
+            {(uniqueColors.length > 0 || uniqueSizes.length > 0) && (
+              <div className="flex flex-col gap-1 mt-2">
+                {uniqueColors.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center">
+                    <span className="text-[10px] font-bold text-slate-400">Màu:</span>
+                    {uniqueColors.map((color, i) => (
+                      <span key={i} className="text-[9px] bg-slate-100 text-slate-650 px-1.5 py-0.2 rounded-sm font-semibold border border-slate-200/60">{color}</span>
+                    ))}
+                  </div>
+                )}
+                {uniqueSizes.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center">
+                    <span className="text-[10px] font-bold text-slate-400">Size:</span>
+                    {uniqueSizes.map((size, i) => (
+                      <span key={i} className="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.2 rounded-sm font-semibold border border-orange-100/60">{size}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      )
+        );
+      }
     },
     {
       header: 'Danh mục',
@@ -246,33 +336,50 @@ function AdminProducts() {
     },
     {
       header: 'Đơn giá',
-      render: (row) => (
-        <div>
-          <div className="font-extrabold text-slate-800 text-sm">{formatPrice(row.price)}</div>
-          {row.discountPercent > 0 && (
-            <div className="text-xs text-rose-500 font-bold flex items-center gap-0.5 mt-0.5">
-              <Percent size={11} /> Giảm {row.discountPercent}%
+      render: (row) => {
+        const prices = (row.variants || []).map(v => v.price).filter(Boolean);
+        const hasPriceRange = prices.length > 0;
+        const minPrice = hasPriceRange ? Math.min(...prices) : row.price;
+        const maxPrice = hasPriceRange ? Math.max(...prices) : row.price;
+
+        return (
+          <div>
+            <div className="font-extrabold text-slate-800 text-sm">
+              {hasPriceRange && minPrice !== maxPrice 
+                ? `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}` 
+                : formatPrice(row.price)}
             </div>
-          )}
-        </div>
-      )
+            {row.discountPercent > 0 && (
+              <div className="text-xs text-rose-500 font-bold flex items-center gap-0.5 mt-0.5">
+                <Percent size={11} /> Giảm {row.discountPercent}%
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: 'Kho hàng',
-      render: (row) => (
-        <div>
-          <div className="font-bold text-slate-700 text-xs flex items-center gap-1">
-            <Box size={12} className="text-slate-400" /> {row.stock} sản phẩm
+      render: (row) => {
+        const totalStock = row.variants && row.variants.length > 0 
+          ? row.variants.reduce((sum, v) => sum + (v.stock || 0), 0) 
+          : row.stock;
+
+        return (
+          <div>
+            <div className="font-bold text-slate-700 text-xs flex items-center gap-1">
+              <Box size={12} className="text-slate-400" /> {totalStock} sản phẩm
+            </div>
+            <div className="mt-1">
+              {totalStock > 0 ? (
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-bold uppercase">Còn hàng</span>
+              ) : (
+                <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded-full font-bold uppercase">Hết hàng</span>
+              )}
+            </div>
           </div>
-          <div className="mt-1">
-            {row.stock > 0 ? (
-              <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full font-bold uppercase">Còn hàng</span>
-            ) : (
-              <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded-full font-bold uppercase">Hết hàng</span>
-            )}
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       header: 'Trạng thái hiển thị',
@@ -378,6 +485,25 @@ function AdminProducts() {
             <option value="out_of_stock">Hết hàng (Out of stock)</option>
           </select>
 
+          <select 
+            value={`${sortField}-${sortDirection}`} 
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="bg-white border border-slate-200 text-slate-750 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[#f47920] cursor-pointer transition-colors"
+          >
+            <option value="name-asc">Tên (A-Z)</option>
+            <option value="name-desc">Tên (Z-A)</option>
+            <option value="price-asc">Giá (Thấp → Cao)</option>
+            <option value="price-desc">Giá (Cao → Thấp)</option>
+            <option value="stock-asc">Kho (Ít → Nhiều)</option>
+            <option value="stock-desc">Kho (Nhiều → Ít)</option>
+            <option value="id-asc">Mã sản phẩm (Tăng dần)</option>
+            <option value="id-desc">Mã sản phẩm (Giảm dần)</option>
+          </select>
+
           <AdminButton onClick={handleOpenCreateModal}>
             <Plus size={15} /> Thêm sản phẩm
           </AdminButton>
@@ -387,7 +513,7 @@ function AdminProducts() {
       {/* Main Table */}
       <AdminTable 
         columns={columns} 
-        data={filteredProducts} 
+        data={sortedProducts} 
         emptyMessage="Không tìm thấy sản phẩm nào khớp với bộ lọc."
       />
 
@@ -470,13 +596,87 @@ function AdminProducts() {
               onChange={(e) => setFormData(prev => ({ ...prev, discountPercent: e.target.value }))}
               error={formErrors.discountPercent}
             />
+          </div>
 
-            <AdminInput 
-              label="Đường dẫn ảnh sản phẩm" 
-              placeholder="Nhập link ảnh (ví dụ: /racket_product_1.png)..."
-              value={formData.imageUrl}
-              onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-            />
+          {/* Multiple Images Section */}
+          <div className="pt-2 space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold text-slate-700">Hình ảnh sản phẩm (Danh sách URL ảnh)</label>
+              <button 
+                type="button"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  images: [...(prev.images || []), '']
+                }))}
+                className="text-xs font-bold text-[#f47920] hover:text-[#e06810] flex items-center gap-1"
+              >
+                + Thêm đường dẫn ảnh
+              </button>
+            </div>
+
+            {(formData.images || []).length === 0 ? (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                <span className="text-xs text-slate-400 italic">Chưa có ảnh nào. Sản phẩm sẽ sử dụng ảnh mặc định.</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                {(formData.images || []).map((imgUrl, i) => (
+                  <div key={i} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200">
+                    <img 
+                      src={imgUrl || '/racket_product_1.png'} 
+                      alt="Preview" 
+                      className="w-10 h-10 object-contain rounded bg-white border border-slate-100 shrink-0"
+                      onError={(e) => { e.target.src = '/racket_product_1.png'; }}
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Nhập URL hoặc chọn file..."
+                      value={imgUrl || ''}
+                      onChange={(e) => {
+                        const updated = [...formData.images];
+                        updated[i] = e.target.value;
+                        setFormData(prev => ({ ...prev, images: updated, imageUrl: updated[0] || '' }));
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-slate-200 text-xs focus:outline-none focus:border-[#f47920] min-w-0"
+                    />
+                    <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border border-slate-250 cursor-pointer shrink-0">
+                      Tải lên
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          try {
+                            setUploading(true);
+                            const url = await uploadImage(file);
+                            const updated = [...formData.images];
+                            updated[i] = url;
+                            setFormData(prev => ({ ...prev, images: updated, imageUrl: updated[0] || '' }));
+                            showFeedback('Tải hình ảnh lên thành công!', 'success');
+                          } catch (err) {
+                            showFeedback(err.message || 'Lỗi tải ảnh', 'error');
+                          } finally {
+                            setUploading(false);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const updated = formData.images.filter((_, idx) => idx !== i);
+                        setFormData(prev => ({ ...prev, images: updated, imageUrl: updated[0] || '' }));
+                      }}
+                      className="text-rose-500 hover:text-rose-700 text-xs font-bold px-1 shrink-0"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1 w-full">
@@ -500,6 +700,146 @@ function AdminProducts() {
             <label htmlFor="isFeatured" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
               Đặt sản phẩm làm nổi bật (Featured)
             </label>
+          </div>
+
+          {/* Variants Section */}
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-bold text-slate-850">Biến thể sản phẩm (Màu, Size, Giá, Kho)</label>
+              <button 
+                type="button"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  variants: [...(prev.variants || []), { size: '', color: '', price: formData.price || '', stock: formData.stock || '', sku: '' }]
+                }))}
+                className="text-xs font-bold text-[#f47920] hover:text-[#e06810] flex items-center gap-1"
+              >
+                + Thêm biến thể
+              </button>
+            </div>
+
+            {(formData.variants || []).length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Sản phẩm chưa có biến thể nào. Mặc định sẽ sử dụng đơn giá và số kho chung.</p>
+            ) : (
+              <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+                {(formData.variants || []).map((v, idx) => (
+                  <div key={idx} className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 relative space-y-3">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-600">Biến thể #{idx + 1}</span>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.variants.filter((_, i) => i !== idx);
+                          setFormData(prev => ({ ...prev, variants: updated }));
+                        }}
+                        className="text-xs font-bold text-rose-500 hover:text-rose-700 cursor-pointer"
+                      >
+                        Xóa biến thể
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Màu sắc</label>
+                        <input 
+                          type="text"
+                          placeholder="Ví dụ: Đỏ, Xanh..."
+                          value={v.color || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].color = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.color ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.color && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].color}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Kích cỡ (Size)</label>
+                        <input 
+                          type="text"
+                          placeholder="Ví dụ: 3U/G5, 39, L..."
+                          value={v.size || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].size = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.size ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.size && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].size}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Đơn giá (VND)</label>
+                        <input 
+                          type="number"
+                          placeholder="Giá biến thể"
+                          value={v.price || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].price = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.price ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.price && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].price}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Số lượng kho</label>
+                        <input 
+                          type="number"
+                          placeholder="Số kho..."
+                          value={v.stock || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].stock = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.stock ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.stock && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].stock}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Mã SKU</label>
+                        <input 
+                          type="text"
+                          placeholder="Mã SKU..."
+                          value={v.sku || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].sku = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">

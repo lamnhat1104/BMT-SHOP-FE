@@ -18,6 +18,8 @@ function AdminCoupons() {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'EXPIRED' | 'INACTIVE'
+  const [sortField, setSortField] = useState('code'); // 'code', 'discount', 'expiry'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc', 'desc'
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,7 +199,7 @@ function AdminCoupons() {
 
   // Filter logic
   const filteredCoupons = coupons.filter(coupon => {
-    const matchesSearch = coupon.code.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    const matchesSearch = (coupon.code || '').toLowerCase().includes(searchQuery.toLowerCase().trim());
     
     const isExpired = new Date(coupon.expiredAt) < new Date();
     
@@ -211,6 +213,20 @@ function AdminCoupons() {
     }
 
     return matchesSearch && matchesStatus;
+  });
+
+  const sortedCoupons = [...filteredCoupons].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'code') {
+      comparison = (a.code || '').localeCompare(b.code || '');
+    } else if (sortField === 'discount') {
+      comparison = (a.discountValue || 0) - (b.discountValue || 0);
+    } else if (sortField === 'expiry') {
+      const dateA = a.expiredAt ? new Date(a.expiredAt).getTime() : 0;
+      const dateB = b.expiredAt ? new Date(b.expiredAt).getTime() : 0;
+      comparison = dateA - dateB;
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
   });
 
   const columns = [
@@ -372,6 +388,23 @@ function AdminCoupons() {
             <option value="INACTIVE">Tạm ngưng</option>
           </select>
 
+          <select 
+            value={`${sortField}-${sortDirection}`} 
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="bg-white border border-slate-200 text-slate-750 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[#f47920] cursor-pointer transition-colors"
+          >
+            <option value="code-asc">Mã KM (A-Z)</option>
+            <option value="code-desc">Mã KM (Z-A)</option>
+            <option value="discount-asc">Giảm giá (Thấp → Cao)</option>
+            <option value="discount-desc">Giảm giá (Cao → Thấp)</option>
+            <option value="expiry-asc">Hạn dùng (Gần → Xa)</option>
+            <option value="expiry-desc">Hạn dùng (Xa → Gần)</option>
+          </select>
+
           <AdminButton onClick={handleOpenCreateModal}>
             <Plus size={15} /> Thêm khuyến mãi
           </AdminButton>
@@ -381,7 +414,7 @@ function AdminCoupons() {
       {/* Main Table */}
       <AdminTable 
         columns={columns} 
-        data={filteredCoupons} 
+        data={sortedCoupons} 
         emptyMessage="Không tìm thấy mã khuyến mãi nào khớp với bộ lọc tìm kiếm."
       />
 
