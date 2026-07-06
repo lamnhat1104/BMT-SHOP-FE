@@ -17,6 +17,8 @@ function AdminReviews() {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState('ALL'); // 'ALL' | '1' | '2' | '3' | '4' | '5'
+  const [sortField, setSortField] = useState('date'); // 'rating', 'date'
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
 
   const [actionFeedback, setActionFeedback] = useState({ text: '', type: '' });
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -96,6 +98,18 @@ function AdminReviews() {
     const matchesRating = ratingFilter === 'ALL' || review.rating === parseInt(ratingFilter, 10);
 
     return matchesSearch && matchesRating;
+  });
+
+  const sortedReviews = [...filteredReviews].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'rating') {
+      comparison = (a.rating || 0) - (b.rating || 0);
+    } else if (sortField === 'date') {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      comparison = dateA - dateB;
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
   });
 
   const columns = [
@@ -236,13 +250,27 @@ function AdminReviews() {
             <option value="2">2 sao</option>
             <option value="1">1 sao</option>
           </select>
+          <select 
+            value={`${sortField}-${sortDirection}`} 
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="bg-white border border-slate-200 text-slate-750 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[#f47920] cursor-pointer transition-colors"
+          >
+            <option value="date-desc">Thời gian (Mới nhất)</option>
+            <option value="date-asc">Thời gian (Cũ nhất)</option>
+            <option value="rating-desc">Xếp hạng (5 → 1 sao)</option>
+            <option value="rating-asc">Xếp hạng (1 → 5 sao)</option>
+          </select>
         </div>
       </div>
 
       {/* Main Table */}
       <AdminTable 
         columns={columns} 
-        data={filteredReviews} 
+        data={sortedReviews} 
         emptyMessage="Không tìm thấy đánh giá nào khớp với bộ lọc tìm kiếm."
       />
 

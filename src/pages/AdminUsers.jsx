@@ -18,6 +18,8 @@ function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [sortField, setSortField] = useState('name'); // 'name', 'email', 'userId'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc', 'desc'
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -161,8 +163,8 @@ function AdminUsers() {
   // Filter users based on query, role, status
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.fullName.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+      (user.fullName || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+      (user.email || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
       (user.phone && user.phone.includes(searchQuery.trim()));
     
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
@@ -172,6 +174,18 @@ function AdminUsers() {
       (statusFilter === 'BLOCKED' && user.isActive === 0);
 
     return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'name') {
+      comparison = (a.fullName || '').localeCompare(b.fullName || '');
+    } else if (sortField === 'email') {
+      comparison = (a.email || '').localeCompare(b.email || '');
+    } else if (sortField === 'userId') {
+      comparison = (a.userId || 0) - (b.userId || 0);
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
   });
 
   // Table Columns Definition
@@ -333,6 +347,23 @@ function AdminUsers() {
             <option value="BLOCKED">Đang khóa</option>
           </select>
 
+          <select 
+            value={`${sortField}-${sortDirection}`} 
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="bg-white border border-slate-200 text-slate-750 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[#f47920] cursor-pointer transition-colors"
+          >
+            <option value="name-asc">Tên (A-Z)</option>
+            <option value="name-desc">Tên (Z-A)</option>
+            <option value="email-asc">Email (A-Z)</option>
+            <option value="email-desc">Email (Z-A)</option>
+            <option value="userId-asc">ID (Tăng dần)</option>
+            <option value="userId-desc">ID (Giảm dần)</option>
+          </select>
+
           <AdminButton onClick={handleOpenCreateModal}>
             <UserPlus size={15} /> Thêm thành viên
           </AdminButton>
@@ -342,7 +373,7 @@ function AdminUsers() {
       {/* Main Table */}
       <AdminTable 
         columns={columns} 
-        data={filteredUsers} 
+        data={sortedUsers} 
         emptyMessage="Không tìm thấy thành viên nào phù hợp với bộ lọc."
       />
 

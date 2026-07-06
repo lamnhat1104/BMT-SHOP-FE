@@ -64,3 +64,35 @@ export async function fetchData(endpoint, options = {}) {
     throw error;
   }
 }
+
+/**
+ * Upload a file to Cloudinary via the backend generic upload API.
+ */
+export async function uploadImage(file) {
+  const url = `${BASE_URL}/upload`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const defaultHeaders = {};
+  const token = localStorage.getItem('token');
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: defaultHeaders,
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Lỗi khi tải ảnh lên');
+    }
+    return data.url;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+}

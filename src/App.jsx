@@ -28,6 +28,7 @@ import AdminProducts from './pages/AdminProducts';
 import AdminCategories from './pages/AdminCategories';
 import AdminCoupons from './pages/AdminCoupons';
 import AdminReviews from './pages/AdminReviews';
+import AdminReports from './pages/AdminReports';
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
         </Route>
       </Routes>
     </Router>
