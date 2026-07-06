@@ -19,16 +19,53 @@ function AdminDashboard() {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        const [statsData, revData, statData, ordersData] = await Promise.all([
-          adminApi.getDashboardStats(),
-          adminApi.getRevenueChartData(),
-          adminApi.getOrderStatusData(),
-          adminApi.getRecentOrders()
-        ]);
-        setStats(statsData);
+        const statsData = await adminApi.getDashboardStats();
+        
+        // Map general metrics
+        setStats({
+          totalRevenue: statsData.totalRevenue || 0,
+          revenueTrend: 0,
+          totalOrders: statsData.totalOrders || 0,
+          ordersTrend: 0,
+          totalProducts: statsData.totalProducts || 0,
+          productsTrend: 0,
+          totalMembers: statsData.totalUsers || 0,
+          membersTrend: 0
+        });
+
+        // Map monthly revenue chart data
+        const revData = (statsData.monthlyRevenue || []).map(item => ({
+          month: item.month,
+          revenue: item.revenue || 0
+        }));
         setRevenueData(revData);
-        setStatusData(statData);
-        setRecentOrders(ordersData);
+
+        // Map order status chart data
+        const colors = {
+          'Chờ xác nhận': '#ffb800',
+          'Chờ thanh toán': '#e65100',
+          'Đang xử lý': '#0d47a1',
+          'Đang giao hàng': '#0288d1',
+          'Hoàn thành': '#1b5e20',
+          'Đã hủy': '#c62828'
+        };
+        const statusDataArray = Object.entries(statsData.ordersByStatus || {}).map(([status, count]) => ({
+          name: status,
+          count: count,
+          color: colors[status] || '#9e9e9e'
+        }));
+        setStatusData(statusDataArray);
+
+        // Map recent orders list
+        const ordersList = (statsData.recentOrders || []).map(item => ({
+          id: item.id,
+          orderCode: item.orderCode,
+          fullName: item.fullName,
+          totalPrice: item.totalAmount,
+          status: item.status,
+          orderDate: item.createdAt
+        }));
+        setRecentOrders(ordersList);
       } catch (error) {
         console.error('Lỗi tải dữ liệu Dashboard:', error);
       } finally {
