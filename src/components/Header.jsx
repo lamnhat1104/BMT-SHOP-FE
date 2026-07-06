@@ -405,8 +405,8 @@ function Header() {
         <div className="container">
           <ul className="nav-list">
             <li><NavLink to="/" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>TRANG CHỦ</NavLink></li>
-            <li><NavLink to="/products" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>SẢN PHẨM <ChevronDown size={14} /></NavLink></li>
-            <li><NavLink to="/products?category=sale" className="nav-item">SALE OFF</NavLink></li>
+            <li><Link to="/products" className={`nav-item ${location.pathname === '/products' && !location.search.includes('isSale=true') ? 'active' : ''}`}>SẢN PHẨM <ChevronDown size={14} /></Link></li>
+            <li><Link to="/products?isSale=true" className={`nav-item ${location.pathname === '/products' && location.search.includes('isSale=true') ? 'active' : ''}`}>SALE OFF</Link></li>
             <li><NavLink to="/news" className="nav-item">TIN TỨC</NavLink></li>
             <li><NavLink to="/franchise" className="nav-item">CHÍNH SÁCH NHƯỢNG QUYỀN</NavLink></li>
             <li><NavLink to="/guides" className="nav-item">HƯỚNG DẪN <ChevronDown size={14} /></NavLink></li>
