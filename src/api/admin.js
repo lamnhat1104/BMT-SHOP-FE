@@ -3,86 +3,71 @@ import { fetchData } from './config';
 // Mock API data for Admin Dashboard
 export const adminApi = {
   getDashboardStats: async () => {
-    // Giả lập độ trễ mạng
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const data = await fetchData('/admin/dashboard');
     return {
-      totalRevenue: 12850000, // 12.85M VND
-      revenueTrend: 12.5, // +12.5%
-      totalOrders: 6,
-      ordersTrend: 8.3, // +8.3%
-      totalProducts: 6,
-      productsTrend: 0.0, // Không đổi
-      totalMembers: 5,
-      membersTrend: 25.0, // +25%
+      ...data,
+      totalMembers: data.totalUsers || 0,
+      revenueTrend: 0.0,
+      ordersTrend: 0.0,
+      productsTrend: 0.0,
+      membersTrend: 0.0
     };
   },
 
   getRevenueChartData: async () => {
-    await new Promise(resolve => setTimeout(resolve, 350));
-    return [
-      { month: 'Tháng 1', revenue: 4500000 },
-      { month: 'Tháng 2', revenue: 7200000 },
-      { month: 'Tháng 3', revenue: 5800000 },
-      { month: 'Tháng 4', revenue: 9400000 },
-      { month: 'Tháng 5', revenue: 12850000 },
-    ];
+    const data = await fetchData('/admin/dashboard');
+    return (data.monthlyRevenue || []).map(item => ({
+      month: item.month,
+      revenue: item.revenue
+    }));
   },
 
   getOrderStatusData: async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return [
-      { name: 'Chờ xác nhận', count: 1, color: '#ffb800' },
-      { name: 'Đang xử lý', count: 1, color: '#0d47a1' },
-      { name: 'Đang giao hàng', count: 1, color: '#e65100' },
-      { name: 'Hoàn thành', count: 2, color: '#1b5e20' },
-      { name: 'Đã hủy', count: 1, color: '#c62828' }
-    ];
+    const stats = await fetchData('/admin/dashboard');
+    const colors = {
+      'Chờ xác nhận': '#ffb800',
+      'Chờ thanh toán': '#e65100',
+      'Đang xử lý': '#0d47a1',
+      'Đang giao hàng': '#0288d1',
+      'Hoàn thành': '#1b5e20',
+      'Đã hủy': '#c62828'
+    };
+    if (stats && stats.ordersByStatus) {
+      return Object.entries(stats.ordersByStatus).map(([status, count]) => ({
+        name: status,
+        count: count,
+        color: colors[status] || '#9e9e9e'
+      }));
+    }
+    return [];
   },
 
   getRecentOrders: async () => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return [
-      {
-        id: 1,
-        orderCode: 'ORD-9872',
-        fullName: 'Nguyễn Văn Hùng',
-        totalPrice: 3450000,
-        status: 'Chờ xác nhận',
-        orderDate: '2026-05-30T10:30:00'
-      },
-      {
-        id: 2,
-        orderCode: 'ORD-9861',
-        fullName: 'Trần Thị Mai',
-        totalPrice: 1250000,
-        status: 'Hoàn thành',
-        orderDate: '2026-05-29T15:20:00'
-      },
-      {
-        id: 3,
-        orderCode: 'ORD-9850',
-        fullName: 'Lê Hoàng Nam',
-        totalPrice: 4700000,
-        status: 'Đang giao hàng',
-        orderDate: '2026-05-29T09:15:00'
-      },
-      {
-        id: 4,
-        orderCode: 'ORD-9843',
-        fullName: 'Phạm Thanh Sơn',
-        totalPrice: 180000,
-        status: 'Đang xử lý',
-        orderDate: '2026-05-28T16:45:00'
-      },
-      {
-        id: 5,
-        orderCode: 'ORD-9830',
-        fullName: 'Đỗ Thùy Chi',
-        totalPrice: 3100000,
-        status: 'Hoàn thành',
-        orderDate: '2026-05-28T11:10:00'
-      }
-    ];
+    const stats = await fetchData('/admin/dashboard');
+    return (stats.recentOrders || []).map(item => ({
+      id: item.id,
+      orderCode: item.orderCode,
+      fullName: item.fullName,
+      totalPrice: item.totalAmount,
+      status: item.status,
+      orderDate: item.createdAt
+    }));
+  },
+
+  getRevenueReport: async (period, startDate, endDate) => {
+    let url = `/admin/reports/revenue?period=${period}`;
+    if (period === 'custom' && startDate && endDate) {
+      url += `&startDate=${startDate}&endDate=${endDate}`;
+    }
+    return fetchData(url);
+  },
+
+  getCategoryRevenueReport: async (period, startDate, endDate) => {
+    let url = `/admin/reports/category-revenue?period=${period}`;
+    if (period === 'custom' && startDate && endDate) {
+      url += `&startDate=${startDate}&endDate=${endDate}`;
+    }
+    return fetchData(url);
   },
 
   getUsers: async () => {

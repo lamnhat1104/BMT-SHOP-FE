@@ -13,6 +13,8 @@ function AdminOrders() {
   // Search & Filter state
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState('date'); // 'code', 'name', 'date', 'price'
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
   
   // Detail Modal state
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -94,10 +96,42 @@ function AdminOrders() {
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
     const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
-    const matchesSearch = order.orderCode.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-                          order.fullName.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-                          order.phone.includes(searchQuery.trim());
+    const matchesSearch = (order.orderCode || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                          (order.fullName || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                          (order.phone || '').includes(searchQuery.trim());
     return matchesStatus && matchesSearch;
+  });
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIcon = (field) => {
+    if (sortField !== field) return <span className="text-gray-300 ml-1">↕</span>;
+    return sortDirection === 'asc' 
+      ? <span className="text-[var(--primary-color)] ml-1">▲</span> 
+      : <span className="text-[var(--primary-color)] ml-1">▼</span>;
+  };
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    let comparison = 0;
+    if (sortField === 'date') {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      comparison = dateA - dateB;
+    } else if (sortField === 'code') {
+      comparison = (a.orderCode || '').localeCompare(b.orderCode || '');
+    } else if (sortField === 'name') {
+      comparison = (a.fullName || '').localeCompare(b.fullName || '');
+    } else if (sortField === 'price') {
+      comparison = (a.totalAmount || 0) - (b.totalAmount || 0);
+    }
+    return sortDirection === 'desc' ? -comparison : comparison;
   });
 
   if (loading) {
@@ -156,21 +190,45 @@ function AdminOrders() {
         </div>
 
         {/* Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-slate-400" />
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái:</span>
-          <select 
-            value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white border border-gray-200 text-slate-700 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[var(--primary-color)] cursor-pointer transition-colors"
-          >
-            <option value="ALL">Tất cả đơn hàng</option>
-            <option value="Chờ xác nhận">Chờ xác nhận</option>
-            <option value="Đang xử lý">Đang xử lý</option>
-            <option value="Đang giao hàng">Đang giao hàng</option>
-            <option value="Hoàn thành">Hoàn thành</option>
-            <option value="Đã hủy">Đã hủy</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-slate-400" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái:</span>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-white border border-gray-200 text-slate-700 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[var(--primary-color)] cursor-pointer transition-colors"
+            >
+              <option value="ALL">Tất cả đơn hàng</option>
+              <option value="Chờ xác nhận">Chờ xác nhận</option>
+              <option value="Đang xử lý">Đang xử lý</option>
+              <option value="Đang giao hàng">Đang giao hàng</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Đã hủy">Đã hủy</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sắp xếp:</span>
+            <select 
+              value={`${sortField}-${sortDirection}`} 
+              onChange={(e) => {
+                const [field, direction] = e.target.value.split('-');
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+              className="bg-white border border-gray-200 text-slate-700 text-sm font-semibold rounded-xl px-4 py-2.5 outline-hidden focus:border-[var(--primary-color)] cursor-pointer transition-colors"
+            >
+              <option value="date-desc">Thời gian (Mới nhất)</option>
+              <option value="date-asc">Thời gian (Cũ nhất)</option>
+              <option value="code-asc">Mã đơn (A-Z)</option>
+              <option value="code-desc">Mã đơn (Z-A)</option>
+              <option value="name-asc">Khách hàng (A-Z)</option>
+              <option value="name-desc">Khách hàng (Z-A)</option>
+              <option value="price-desc">Tổng tiền (Cao → Thấp)</option>
+              <option value="price-asc">Tổng tiền (Thấp → Cao)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -189,14 +247,14 @@ function AdminOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {filteredOrders.length === 0 ? (
+              {sortedOrders.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-gray-400 font-medium">
                     Không tìm thấy đơn hàng nào phù hợp.
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map(order => (
+                sortedOrders.map(order => (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-4.5 px-6 font-bold text-[var(--primary-color)]">{order.orderCode}</td>
                     <td className="py-4.5 px-6">
