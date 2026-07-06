@@ -1,18 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * Reusable dynamic Admin Table component with client-side pagination
  */
-export default function AdminTable({ columns, data, emptyMessage = "Không có dữ liệu", itemsPerPage = 10 }) {
-  const [currentPage, setCurrentPage] = useState(1);
+export default function AdminTable({ columns, data, emptyMessage = "Không có dữ liệu", itemsPerPage = 10, pageKey = "page" }) {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Reset to first page when data changes (e.g. searching/filtering)
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [data]);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get(pageKey);
+    return p ? parseInt(p) : 1;
+  });
 
   const totalPages = Math.ceil(data.length / itemsPerPage) || 1;
+
+  // Auto-correct page if out of bounds (e.g. after filtering)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (currentPage !== 1 || params.has(pageKey)) {
+      params.set(pageKey, currentPage);
+      navigate({ search: params.toString() }, { replace: true });
+    }
+  }, [currentPage]);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = data.slice(startIndex, startIndex + itemsPerPage);
 

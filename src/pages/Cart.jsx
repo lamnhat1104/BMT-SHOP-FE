@@ -39,7 +39,17 @@ function Cart() {
   const updateQty = async (id, delta, details) => {
     const item = cartItems.find(i => i.id === id);
     if (!item) return;
-    const newQty = Math.max(1, item.quantity + delta);
+    
+    // Nếu có stock từ backend thì giới hạn, nếu không (localStorage cũ không có) thì thôi
+    const maxQty = item.stock !== undefined ? item.stock : 999;
+    const newQty = Math.max(1, Math.min(maxQty, item.quantity + delta));
+    
+    if (newQty === item.quantity) {
+      if (item.quantity >= maxQty && delta > 0) {
+        alert('Số lượng yêu cầu vượt quá sản phẩm có sẵn trong kho!');
+      }
+      return;
+    }
     
     if (token) {
       try {

@@ -12,7 +12,8 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  MessageSquare
 } from 'lucide-react';
 
 function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
@@ -77,6 +78,16 @@ function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
           >
             <ShoppingCart size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
             {!collapsed && <span className="animate-fade-in whitespace-nowrap">Quản lý đơn hàng</span>}
+          </NavLink>
+
+          <NavLink 
+            to="/admin/complaints" 
+            className={({ isActive }) => getLinkClass(isActive)}
+            onClick={onClose}
+            title={collapsed ? "Quản lý khiếu nại" : undefined}
+          >
+            <MessageSquare size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
+            {!collapsed && <span className="animate-fade-in whitespace-nowrap">Quản lý khiếu nại</span>}
           </NavLink>
 
           <NavLink 

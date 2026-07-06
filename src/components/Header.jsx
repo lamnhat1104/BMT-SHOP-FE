@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Headphones, MapPin, Search, Binoculars, User, ShoppingCart, ChevronDown } from 'lucide-react';
+import { Headphones, MapPin, Search, Binoculars, User, ShoppingCart, ChevronDown, Bell } from 'lucide-react';
 import { cartApi } from '../api/cart';
 import { productApi } from '../api/product';
+import { notificationApi } from '../api/notification';
 
 function Header() {
   const location = useLocation();
@@ -15,6 +16,10 @@ function Header() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   // Parse keyword from URL on mount
   useEffect(() => {
@@ -55,16 +60,59 @@ function Header() {
     }
   };
 
-  // Close dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.search-bar-container')) {
         setShowDropdown(false);
       }
+      if (!event.target.closest('.notif-container')) {
+        setShowNotifDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fetch notifications polling
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (user.token) {
+        try {
+          const res = await notificationApi.getMyNotifications();
+          setNotifications(res);
+        } catch (error) {
+          // ignore
+        }
+      }
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user.token]);
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      try {
+        await notificationApi.markAsRead(notif.id);
+        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+      } catch (error) {
+        console.error("Lỗi đánh dấu đã đọc:", error);
+      }
+    }
+    setShowNotifDropdown(false);
+    if (notif.type === 'ORDER') navigate('/order-tracking');
+    else if (notif.type === 'COUPON') navigate('/');
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationApi.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
     // 1. Xử lý các tham số query do Backend redirect về sau khi login OAuth2 (Social) thành công
@@ -115,7 +163,7 @@ function Header() {
         try {
           const cart = await cartApi.getCart();
           const items = Array.isArray(cart) ? cart : [];
-          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          const total = items.length;
           setCartCount(total);
         } catch (err) {
           console.error('Lỗi lấy số lượng giỏ hàng:', err);
@@ -126,7 +174,7 @@ function Header() {
           const localCart = localStorage.getItem('cart');
           const cart = localCart ? JSON.parse(localCart) : [];
           const items = Array.isArray(cart) ? cart : [];
-          const total = items.reduce((sum, item) => sum + item.quantity, 0);
+          const total = items.length;
           setCartCount(total);
         } catch (err) {
           console.error('Lỗi phân tích giỏ hàng local:', err);
@@ -260,6 +308,47 @@ function Header() {
                 </div>
                 <span>TRA CỨU</span>
               </Link>
+
+              {/* Notification Bell */}
+              {user.token && (
+                <div className="action-item notif-container" style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
+                    <div className="action-icon-wrapper" style={{ position: 'relative' }}>
+                      <Bell size={20} />
+                      {notifications.filter(n => !n.isRead).length > 0 && (
+                        <span style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: 'red', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                          {notifications.filter(n => !n.isRead).length}
+                        </span>
+                      )}
+                    </div>
+                    <span>THÔNG BÁO</span>
+                  </div>
+                  
+                  {showNotifDropdown && (
+                    <div style={{ position: 'absolute', top: '100%', right: '-50px', width: '320px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', zIndex: 1000, marginTop: '15px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '12px 15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '1rem', color: '#333' }}>Thông báo</strong>
+                        {notifications.filter(n => !n.isRead).length > 0 && (
+                          <span onClick={handleMarkAllRead} style={{ fontSize: '0.8rem', color: 'var(--primary-color)', cursor: 'pointer' }}>Đánh dấu tất cả đã đọc</span>
+                        )}
+                      </div>
+                      <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        {notifications.length === 0 ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontSize: '0.9rem' }}>Bạn chưa có thông báo nào.</div>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n.id} onClick={() => handleNotificationClick(n)} style={{ padding: '12px 15px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', backgroundColor: n.isRead ? 'transparent' : '#fff9f5', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = n.isRead ? 'transparent' : '#fff9f5'}>
+                              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#333', marginBottom: '4px' }}>{n.title}</div>
+                              <div style={{ fontSize: '0.85rem', color: '#666', lineHeight: '1.4' }}>{n.message}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '6px' }}>{new Date(n.createdAt).toLocaleString('vi-VN')}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Dynamic User Menu & Dropdown */}
               <div className="action-item user-action-container">
@@ -280,10 +369,12 @@ function Header() {
                         <>
                           <Link to="/admin/dashboard" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Admin</Link>
                           <Link to="/admin/orders" style={{ fontWeight: 'bold' }}>Quản trị đơn hàng</Link>
+                          <Link to="/admin/complaints" style={{ fontWeight: 'bold' }}>Quản lý khiếu nại</Link>
                         </>
                       )}
                       <Link to="/account">Thông tin tài khoản</Link>
                       <Link to="/order-tracking">Tra cứu đơn hàng</Link>
+                      <Link to="/my-complaints">Khiếu nại & Hoàn tiền</Link>
                       <Link to="/wishlist">Sản phẩm yêu thích</Link>
                       <button onClick={handleLogout} className="dropdown-logout-btn">Đăng xuất</button>
                     </>
@@ -314,8 +405,8 @@ function Header() {
         <div className="container">
           <ul className="nav-list">
             <li><NavLink to="/" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>TRANG CHỦ</NavLink></li>
-            <li><NavLink to="/products" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>SẢN PHẨM <ChevronDown size={14} /></NavLink></li>
-            <li><NavLink to="/products?category=sale" className="nav-item">SALE OFF</NavLink></li>
+            <li><Link to="/products" className={`nav-item ${location.pathname === '/products' && !location.search.includes('isSale=true') ? 'active' : ''}`}>SẢN PHẨM <ChevronDown size={14} /></Link></li>
+            <li><Link to="/products?isSale=true" className={`nav-item ${location.pathname === '/products' && location.search.includes('isSale=true') ? 'active' : ''}`}>SALE OFF</Link></li>
             <li><NavLink to="/news" className="nav-item">TIN TỨC</NavLink></li>
             <li><NavLink to="/franchise" className="nav-item">CHÍNH SÁCH NHƯỢNG QUYỀN</NavLink></li>
             <li><NavLink to="/guides" className="nav-item">HƯỚNG DẪN <ChevronDown size={14} /></NavLink></li>

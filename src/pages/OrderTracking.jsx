@@ -4,7 +4,7 @@ import { orderApi } from '../api/order';
 import { reviewApi } from '../api/review';
 import { Search, MapPin, CreditCard, ShoppingBag, Clock, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import ReviewFormModal from '../components/ReviewFormModal';
-
+import ComplaintModal from '../components/ComplaintModal';
 function OrderTracking() {
   const [orderCode, setOrderCode] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,7 +16,7 @@ function OrderTracking() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewingProduct, setReviewingProduct] = useState(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-
+  const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   // New states for logged in users
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
@@ -289,6 +289,19 @@ function OrderTracking() {
                       {formatPrice(orderData.totalAmount)}
                     </td>
                   </tr>
+                  {(orderData.status === 'completed' || orderData.status === 'Hoàn thành' || orderData.status === 'delivered' || orderData.status === 'Đã giao') && (
+                    <tr style={{ backgroundColor: '#fff' }}>
+                      <td colSpan="3" style={{ padding: '15px', textAlign: 'right' }}>
+                        <button 
+                          onClick={() => setIsComplaintModalOpen(true)}
+                          style={{ padding: '8px 16px', fontSize: '0.9rem', backgroundColor: 'transparent', border: '1px solid #ff9800', color: '#ff9800', borderRadius: '6px', cursor: 'pointer', transition: '0.2s', fontWeight: '600' }}
+                          className="hover:bg-orange-50"
+                        >
+                          Khiếu nại / Đổi trả
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -421,6 +434,17 @@ function OrderTracking() {
         onSubmit={handleReviewSubmit}
         isSubmitting={isSubmittingReview}
       />
+
+      {isComplaintModalOpen && orderData && (
+        <ComplaintModal 
+          orderId={orderData.id}
+          onClose={() => setIsComplaintModalOpen(false)}
+          onSuccess={() => {
+            setIsComplaintModalOpen(false);
+            alert("Đã gửi yêu cầu khiếu nại thành công! Vui lòng vào trang Khiếu nại của tôi để theo dõi.");
+          }}
+        />
+      )}
     </div>
   );
 }

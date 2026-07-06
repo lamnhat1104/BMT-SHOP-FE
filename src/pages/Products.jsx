@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { productApi } from '../api/product';
 import { cartApi } from '../api/cart';
 import { optimizeCloudinaryUrl } from '../utils/cloudinary';
+import ProductCard from '../components/ProductCard';
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -13,23 +14,43 @@ function Products() {
   const [selectedSort, setSelectedSort] = useState('newest');
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
 
-  const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const keyword = searchParams.get('keyword');
+  const isSale = searchParams.get('isSale') === 'true';
 
   // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = new URLSearchParams(window.location.search).get('page');
+    return page ? parseInt(page) : 1;
+  });
   const productsPerPage = 8;
+  const navigate = useNavigate();
 
   useEffect(() => {
+    setCurrentPage(1);
     fetchProducts();
-  }, [categoryId, selectedBrand, selectedSort, selectedPriceRange, keyword]);
+  }, [categoryId, selectedBrand, selectedSort, selectedPriceRange, keyword, isSale]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (currentPage !== 1 || params.has('page')) {
+      params.set('page', currentPage);
+      navigate(`?${params.toString()}`, { replace: true });
+    }
+  }, [currentPage]);
+
+  // Initial fetch on mount or page reload
+  useEffect(() => {
+    if (products.length === 0) {
+      fetchProducts();
+    }
+  }, []);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
 
-      const data = await productApi.getAllProducts({
+      let data = await productApi.getAllProducts({
         categoryId,
         brand: selectedBrand,
         sort: selectedSort,
@@ -38,8 +59,11 @@ function Products() {
         keyword: keyword
       });
 
+      if (isSale) {
+        data = data.filter(p => p.discountPercent > 0);
+      }
+
       setProducts(data);
-      setCurrentPage(1);
     } catch (error) {
       console.error(error);
     } finally {
@@ -79,6 +103,44 @@ function Products() {
   const totalPages = Math.ceil(
     products.length / productsPerPage
   );
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const pages = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+
+    return pages.map((page, index) => {
+      if (page === '...') {
+        return <span key={index} style={{ padding: '10px' }}>...</span>;
+      }
+      return (
+        <button
+          key={index}
+          onClick={() => setCurrentPage(page)}
+          style={{
+            padding: '10px 15px',
+            border: '1px solid #ddd',
+            background: currentPage === page ? 'var(--primary-color)' : '#fff',
+            color: currentPage === page ? '#fff' : '#000',
+            cursor: 'pointer',
+            fontWeight: currentPage === page ? 'bold' : 'normal'
+          }}
+        >
+          {page}
+        </button>
+      );
+    });
+  };
 
   return (
     <div
@@ -379,38 +441,7 @@ function Products() {
                 }}
               >
                 {currentProducts.map((p) => (
-                  <div className="product-card" key={p.id}>
-                    {/* Badge */}
-                    <div className="product-badge">
-                      CHÍNH HÃNG
-                    </div>
-
-                    <Link to={`/products/${p.id}`} className="product-card-link">
-                      <div className="product-image-wrapper">
-                        <img
-                          src={optimizeCloudinaryUrl(p.imageUrl || '/racket_product_1.png', 500)}
-                          alt={p.name}
-                          className="product-image"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="product-brand">{p.brand || 'CHÍNH HÃNG'}</div>
-                      <h3 className="product-title">{p.name}</h3>
-                      <div className="product-price">
-                        <span className="price-current">{formatPrice(p.price)}</span>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleAddToCart(e, p);
-                      }}
-                      className="btn-add-to-cart"
-                    >
-                      Thêm vào giỏ
-                    </button>
-                  </div>
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
 
@@ -418,8 +449,7 @@ function Products() {
               <div
                 style={{
                   display: 'flex',
-                  justifyContent:
-                    'center',
+                  justifyContent: 'center',
                   marginTop: '40px',
                   gap: '10px',
                   flexWrap: 'wrap'
@@ -427,93 +457,29 @@ function Products() {
               >
                 {/* Prev */}
                 <button
-                  disabled={
-                    currentPage === 1
-                  }
-                  onClick={() =>
-                    setCurrentPage(
-                      currentPage - 1
-                    )
-                  }
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
                   style={{
                     padding: '10px 15px',
-                    border:
-                      '1px solid #ddd',
-                    background:
-                      currentPage === 1
-                        ? '#f5f5f5'
-                        : '#fff',
-                    cursor:
-                      currentPage === 1
-                        ? 'not-allowed'
-                        : 'pointer'
+                    border: '1px solid #ddd',
+                    background: currentPage === 1 ? '#f5f5f5' : '#fff',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
                   }}
                 >
                   ‹
                 </button>
 
-                {[...Array(totalPages)].map(
-                  (_, index) => (
-                    <button
-                      key={index}
-                      onClick={() =>
-                        setCurrentPage(
-                          index + 1
-                        )
-                      }
-                      style={{
-                        padding:
-                          '10px 15px',
-                        border:
-                          '1px solid #ddd',
-                        background:
-                          currentPage ===
-                          index + 1
-                            ? '#ff4d4f'
-                            : '#fff',
-                        color:
-                          currentPage ===
-                          index + 1
-                            ? '#fff'
-                            : '#000',
-                        cursor: 'pointer',
-                        fontWeight:
-                          currentPage ===
-                          index + 1
-                            ? 'bold'
-                            : 'normal'
-                      }}
-                    >
-                      {index + 1}
-                    </button>
-                  )
-                )}
+                {renderPagination()}
 
                 {/* Next */}
                 <button
-                  disabled={
-                    currentPage ===
-                    totalPages
-                  }
-                  onClick={() =>
-                    setCurrentPage(
-                      currentPage + 1
-                    )
-                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(currentPage + 1)}
                   style={{
                     padding: '10px 15px',
-                    border:
-                      '1px solid #ddd',
-                    background:
-                      currentPage ===
-                      totalPages
-                        ? '#f5f5f5'
-                        : '#fff',
-                    cursor:
-                      currentPage ===
-                      totalPages
-                        ? 'not-allowed'
-                        : 'pointer'
+                    border: '1px solid #ddd',
+                    background: currentPage === totalPages || totalPages === 0 ? '#f5f5f5' : '#fff',
+                    cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer'
                   }}
                 >
                   ›

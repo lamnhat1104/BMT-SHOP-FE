@@ -177,6 +177,12 @@ function ProductDetail() {
   const handleAddToCart = async () => {
     if (!product) return;
     
+    const currentStock = selectedVariant ? selectedVariant.stock : product.stock;
+    if (qty > currentStock) {
+      alert('Số lượng yêu cầu vượt quá sản phẩm có sẵn trong kho!');
+      return;
+    }
+    
     const token = localStorage.getItem('token');
     
     // Xây dựng chuỗi thông số chi tiết từ biến thể được chọn
@@ -206,6 +212,10 @@ function ProductDetail() {
       const existing = cart.find(item => item.id === product.id && item.details === details);
       
       if (existing) {
+        if (existing.quantity + qty > currentStock) {
+          alert('Số lượng trong giỏ hàng và số lượng yêu cầu vượt quá sản phẩm có sẵn trong kho!');
+          return;
+        }
         existing.quantity += qty;
       } else {
         cart.push({
@@ -434,7 +444,10 @@ function ProductDetail() {
             <div className="qty-selector" style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', height: '48px', alignItems: 'center' }}>
               <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ padding: '0 15px', height: '100%', backgroundColor: '#f5f5f5', border: 'none', borderRight: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '1.2rem' }}>-</button>
               <input type="text" value={qty} readOnly style={{ width: '50px', textAlign: 'center', border: 'none', outline: 'none', fontWeight: 'bold', fontSize: '1.1rem', backgroundColor: 'transparent' }} />
-              <button onClick={() => setQty(qty + 1)} style={{ padding: '0 15px', height: '100%', backgroundColor: '#f5f5f5', border: 'none', borderLeft: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '1.2rem' }}>+</button>
+              <button onClick={() => setQty(Math.min(displayStock, qty + 1))} style={{ padding: '0 15px', height: '100%', backgroundColor: '#f5f5f5', border: 'none', borderLeft: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '1.2rem' }}>+</button>
+            </div>
+            <div style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: '10px' }}>
+              Còn lại: <strong style={{ color: displayStock > 0 ? 'var(--primary-color)' : 'red' }}>{displayStock}</strong> sản phẩm
             </div>
             
             <button 

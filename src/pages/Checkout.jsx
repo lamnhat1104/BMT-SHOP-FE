@@ -19,6 +19,7 @@ function Checkout() {
   });
   
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [shippingMethod, setShippingMethod] = useState('Tiêu chuẩn');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -107,7 +108,16 @@ function Checkout() {
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shippingFee = 0; // Miễn phí vận chuyển
+  
+  let shippingFee = 30000;
+  let displayShippingMethod = shippingMethod;
+  if (subtotal >= 2000000) {
+    shippingFee = 0;
+    displayShippingMethod = 'Miễn phí vận chuyển';
+  } else if (shippingMethod === 'Hỏa tốc') {
+    shippingFee = 50000;
+  }
+  
   const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
 
   const handleApplyCoupon = async () => {
@@ -175,7 +185,8 @@ function Checkout() {
         address: profile.address.trim(),
         notes: profile.notes.trim(),
         paymentMethod: paymentMethod,
-        couponCode: appliedCoupon ? appliedCoupon.code : null
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        shippingMethod: displayShippingMethod
       };
 
       const result = await orderApi.createOrder(orderPayload);
@@ -360,6 +371,57 @@ function Checkout() {
             </div>
           </div>
 
+          {/* Shipping Method Selector */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+            <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Truck style={{ color: 'var(--primary-color)' }} size={22} /> Phương thức giao hàng
+            </h3>
+
+            {subtotal >= 2000000 ? (
+              <div style={{ padding: '15px 20px', backgroundColor: '#e8f5e9', border: '1px solid #4caf50', borderRadius: '8px', color: '#2e7d32' }}>
+                <strong>🎉 Đơn hàng của bạn đã đủ điều kiện Miễn phí vận chuyển!</strong>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <label style={{ 
+                  display: 'flex', alignItems: 'center', gap: '15px', padding: '15px 20px', 
+                  border: shippingMethod === 'Tiêu chuẩn' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                  borderRadius: '8px', cursor: 'pointer',
+                  backgroundColor: shippingMethod === 'Tiêu chuẩn' ? 'rgba(244,121,32,0.03)' : 'transparent', transition: '0.3s'
+                }}>
+                  <input 
+                    type="radio" name="shippingMethod" value="Tiêu chuẩn" 
+                    checked={shippingMethod === 'Tiêu chuẩn'} 
+                    onChange={() => setShippingMethod('Tiêu chuẩn')}
+                    style={{ accentColor: 'var(--primary-color)', width: '18px', height: '18px' }}
+                  />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.95rem' }}>Giao hàng Tiêu chuẩn (30.000đ)</strong>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>Thời gian nhận hàng dự kiến từ 3-5 ngày làm việc.</span>
+                  </div>
+                </label>
+
+                <label style={{ 
+                  display: 'flex', alignItems: 'center', gap: '15px', padding: '15px 20px', 
+                  border: shippingMethod === 'Hỏa tốc' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', 
+                  borderRadius: '8px', cursor: 'pointer',
+                  backgroundColor: shippingMethod === 'Hỏa tốc' ? 'rgba(244,121,32,0.03)' : 'transparent', transition: '0.3s'
+                }}>
+                  <input 
+                    type="radio" name="shippingMethod" value="Hỏa tốc" 
+                    checked={shippingMethod === 'Hỏa tốc'} 
+                    onChange={() => setShippingMethod('Hỏa tốc')}
+                    style={{ accentColor: 'var(--primary-color)', width: '18px', height: '18px' }}
+                  />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.95rem' }}>Giao hàng Hỏa tốc (50.000đ)</strong>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>Nhận hàng nhanh chóng trong vòng 1-2 ngày.</span>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+
           {/* Payment Method Selector */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
             <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -512,8 +574,10 @@ function Checkout() {
                 <strong style={{ color: 'var(--text-dark)' }}>{formatPrice(subtotal)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
-                <span style={{ color: 'var(--text-light)' }}>Phí vận chuyển</span>
-                <strong style={{ color: '#4caf50' }}>Miễn phí</strong>
+                <span style={{ color: 'var(--text-light)' }}>Phí vận chuyển {shippingFee > 0 && `(${shippingMethod})`}</span>
+                <strong style={{ color: shippingFee === 0 ? '#4caf50' : 'var(--text-dark)' }}>
+                  {shippingFee === 0 ? 'Miễn phí' : formatPrice(shippingFee)}
+                </strong>
               </div>
               {discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
