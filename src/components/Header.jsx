@@ -369,10 +369,12 @@ function Header() {
                         <>
                           <Link to="/admin/dashboard" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Admin</Link>
                           <Link to="/admin/orders" style={{ fontWeight: 'bold' }}>Quản trị đơn hàng</Link>
+                          <Link to="/admin/complaints" style={{ fontWeight: 'bold' }}>Quản lý khiếu nại</Link>
                         </>
                       )}
                       <Link to="/account">Thông tin tài khoản</Link>
                       <Link to="/order-tracking">Tra cứu đơn hàng</Link>
+                      <Link to="/my-complaints">Khiếu nại & Hoàn tiền</Link>
                       <Link to="/wishlist">Sản phẩm yêu thích</Link>
                       <button onClick={handleLogout} className="dropdown-logout-btn">Đăng xuất</button>
                     </>

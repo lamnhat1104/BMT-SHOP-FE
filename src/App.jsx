@@ -28,7 +28,8 @@ import AdminProducts from './pages/AdminProducts';
 import AdminCategories from './pages/AdminCategories';
 import AdminCoupons from './pages/AdminCoupons';
 import AdminReviews from './pages/AdminReviews';
-
+import AdminComplaintsPage from './pages/admin/AdminComplaintsPage';
+import MyComplaintsPage from './pages/MyComplaintsPage';
 function App() {
   return (
     <Router>
@@ -49,6 +50,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/my-complaints" element={<MyComplaintsPage />} />
         </Route>
 
         {/* Admin pages wrapped in AdminLayout (No Header, No Footer) */}
@@ -60,6 +62,7 @@ function App() {
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/complaints" element={<AdminComplaintsPage />} />
         </Route>
       </Routes>
     </Router>
