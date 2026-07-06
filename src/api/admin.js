@@ -94,5 +94,12 @@ export const adminApi = {
     return fetchData(`/admin/users/${userId}/toggle-status`, {
       method: 'POST',
     });
+  },
+
+  resetPassword: async (userId, newPassword) => {
+    return fetchData(`/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
   }
 };

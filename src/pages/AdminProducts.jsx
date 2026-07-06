@@ -84,6 +84,34 @@ function AdminProducts() {
     if (formData.discountPercent < 0 || formData.discountPercent > 100) {
       errors.discountPercent = 'Khuyến mãi từ 0% đến 100%';
     }
+
+    if (formData.variants && formData.variants.length > 0) {
+      const variantErrors = [];
+      formData.variants.forEach((v, index) => {
+        const vErr = {};
+        if (!v.color && !v.size) {
+          vErr.color = 'Nhập màu';
+          vErr.size = 'Nhập size';
+        }
+        
+        const priceNum = parseFloat(v.price);
+        if (v.price === '' || isNaN(priceNum) || priceNum <= 0) {
+          vErr.price = 'Giá > 0';
+        }
+        
+        const stockNum = parseInt(v.stock);
+        if (v.stock === '' || isNaN(stockNum) || stockNum < 0) {
+          vErr.stock = 'Kho >= 0';
+        }
+        
+        if (Object.keys(vErr).length > 0) {
+          variantErrors[index] = vErr;
+        }
+      });
+      if (variantErrors.some(Boolean)) {
+        errors.variants = variantErrors;
+      }
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -693,90 +721,120 @@ function AdminProducts() {
             {(formData.variants || []).length === 0 ? (
               <p className="text-xs text-slate-400 italic">Sản phẩm chưa có biến thể nào. Mặc định sẽ sử dụng đơn giá và số kho chung.</p>
             ) : (
-              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
                 {(formData.variants || []).map((v, idx) => (
-                  <div key={idx} className="grid grid-cols-5 gap-2 items-end bg-slate-50 p-3 rounded-xl border border-slate-200/65 relative">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Màu sắc</label>
-                      <input 
-                        type="text"
-                        placeholder="Ví dụ: Đỏ"
-                        value={v.color || ''}
-                        onChange={(e) => {
-                          const updated = [...formData.variants];
-                          updated[idx].color = e.target.value;
-                          setFormData(prev => ({ ...prev, variants: updated }));
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Size</label>
-                      <input 
-                        type="text"
-                        placeholder="Ví dụ: 3U/G5, 39"
-                        value={v.size || ''}
-                        onChange={(e) => {
-                          const updated = [...formData.variants];
-                          updated[idx].size = e.target.value;
-                          setFormData(prev => ({ ...prev, variants: updated }));
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Đơn giá</label>
-                      <input 
-                        type="number"
-                        placeholder="Giá biến thể"
-                        value={v.price || ''}
-                        onChange={(e) => {
-                          const updated = [...formData.variants];
-                          updated[idx].price = e.target.value;
-                          setFormData(prev => ({ ...prev, variants: updated }));
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Số kho</label>
-                      <input 
-                        type="number"
-                        placeholder="Số kho"
-                        value={v.stock || ''}
-                        onChange={(e) => {
-                          const updated = [...formData.variants];
-                          updated[idx].stock = e.target.value;
-                          setFormData(prev => ({ ...prev, variants: updated }));
-                        }}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
-                      />
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <div className="flex-1">
-                        <label className="text-[10px] font-bold text-slate-500 block mb-1">SKU</label>
-                        <input 
-                          type="text"
-                          placeholder="SKU"
-                          value={v.sku || ''}
-                          onChange={(e) => {
-                            const updated = [...formData.variants];
-                            updated[idx].sku = e.target.value;
-                            setFormData(prev => ({ ...prev, variants: updated }));
-                          }}
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
-                        />
-                      </div>
+                  <div key={idx} className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 relative space-y-3">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-600">Biến thể #{idx + 1}</span>
                       <button 
                         type="button"
                         onClick={() => {
                           const updated = formData.variants.filter((_, i) => i !== idx);
                           setFormData(prev => ({ ...prev, variants: updated }));
                         }}
-                        className="text-rose-500 hover:text-rose-700 font-bold text-xs p-1 mb-1 shrink-0"
+                        className="text-xs font-bold text-rose-500 hover:text-rose-700 cursor-pointer"
                       >
-                        Xóa
+                        Xóa biến thể
                       </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Màu sắc</label>
+                        <input 
+                          type="text"
+                          placeholder="Ví dụ: Đỏ, Xanh..."
+                          value={v.color || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].color = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.color ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.color && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].color}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Kích cỡ (Size)</label>
+                        <input 
+                          type="text"
+                          placeholder="Ví dụ: 3U/G5, 39, L..."
+                          value={v.size || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].size = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.size ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.size && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].size}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Đơn giá (VND)</label>
+                        <input 
+                          type="number"
+                          placeholder="Giá biến thể"
+                          value={v.price || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].price = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.price ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.price && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].price}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Số lượng kho</label>
+                        <input 
+                          type="number"
+                          placeholder="Số kho..."
+                          value={v.stock || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].stock = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none ${
+                            formErrors.variants?.[idx]?.stock ? 'border-rose-500 focus:border-rose-500' : 'border-slate-200 focus:border-[#f47920]'
+                          }`}
+                        />
+                        {formErrors.variants?.[idx]?.stock && (
+                          <p className="text-[10px] text-rose-500 mt-1 font-semibold">{formErrors.variants[idx].stock}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Mã SKU</label>
+                        <input 
+                          type="text"
+                          placeholder="Mã SKU..."
+                          value={v.sku || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.variants];
+                            updated[idx].sku = e.target.value;
+                            setFormData(prev => ({ ...prev, variants: updated }));
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#f47920]"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
