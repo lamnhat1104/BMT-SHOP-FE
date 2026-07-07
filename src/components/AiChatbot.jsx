@@ -30,8 +30,8 @@ function AiChatbot({ isOpen, onClose }) {
 
     try {
       const res = await aiApi.chat(userMessage);
-      if (res && res.response) {
-        setMessages(prev => [...prev, { role: 'ai', content: res.response }]);
+      if (res) {
+        setMessages(prev => [...prev, { role: 'ai', content: res }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', content: 'Xin lỗi, tôi không thể trả lời lúc này.' }]);
       }
