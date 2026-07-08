@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,10 +13,26 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
-  MessageSquare
+  MessageSquare,
+  RefreshCw
 } from 'lucide-react';
+import { fetchData } from '../../api/config';
 
 function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncAI = async () => {
+    try {
+      setIsSyncing(true);
+      await fetchData('/v1/ai/sync', { method: 'POST' });
+      alert('Đồng bộ dữ liệu AI thành công!');
+    } catch (error) {
+      alert(error.message || 'Lỗi đồng bộ AI');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const renderSidebarContent = (isDesktop) => {
     const collapsed = isDesktop && isCollapsed;
 
@@ -151,8 +167,20 @@ function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }) {
           </NavLink>
         </nav>
 
-        {/* Back to Home - Sticky at bottom */}
-        <div className="pt-6 mt-auto shrink-0 flex justify-center">
+        {/* Actions - Sticky at bottom */}
+        <div className="pt-6 mt-auto shrink-0 flex flex-col gap-3 justify-center">
+          <button 
+            onClick={handleSyncAI}
+            disabled={isSyncing}
+            title={collapsed ? "Đồng bộ AI" : undefined}
+            className={`flex items-center justify-center rounded-xl border border-white/30 hover:border-white hover:bg-white/10 text-white transition-all duration-300 group ${
+              collapsed ? 'p-3.5' : 'gap-2 w-full py-3.5 text-xs font-bold uppercase tracking-wider'
+            } ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <RefreshCw size={18} className={`group-hover:scale-110 transition-transform duration-300 ${isSyncing ? 'animate-spin' : ''}`} />
+            {!collapsed && <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ AI'}</span>}
+          </button>
+
           <Link 
             to="/" 
             title={collapsed ? "Về trang chủ" : undefined}
