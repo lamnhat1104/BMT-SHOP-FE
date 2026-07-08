@@ -30,10 +30,20 @@ function ProductCard({ product }) {
       const existing = cart.find(item => item.id === product.id);
       
       const currentPrice = product.price - (product.price * (product.discountPercent || 0) / 100);
+      const stock = product.stock !== undefined ? product.stock : 999;
 
       if (existing) {
+        if (existing.quantity + 1 > stock) {
+          alert('Số lượng trong giỏ hàng và số lượng yêu cầu vượt quá sản phẩm có sẵn trong kho!');
+          return;
+        }
         existing.quantity += 1;
+        existing.stock = stock;
       } else {
+        if (1 > stock) {
+          alert('Sản phẩm đã hết hàng!');
+          return;
+        }
         cart.push({
           id: product.id,
           name: product.name,
@@ -41,7 +51,8 @@ function ProductCard({ product }) {
           thumbnail: product.imageUrl,
           brand: product.brand,
           quantity: 1,
-          details: details
+          details: details,
+          stock: stock
         });
       }
       

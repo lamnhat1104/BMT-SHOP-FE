@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { orderApi } from '../api/order';
 import { reviewApi } from '../api/review';
-import { Search, MapPin, CreditCard, ShoppingBag, Clock, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Search, MapPin, CreditCard, ShoppingBag, Clock, CheckCircle2, AlertCircle, ArrowLeft, Star } from 'lucide-react';
 import ReviewFormModal from '../components/ReviewFormModal';
 import ComplaintModal from '../components/ComplaintModal';
 function OrderTracking() {
@@ -274,9 +274,9 @@ function OrderTracking() {
                           <div style={{ marginTop: '10px' }}>
                             <button 
                               onClick={() => handleReviewClick(item)}
-                              style={{ padding: '6px 12px', fontSize: '0.8rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', cursor: 'pointer', transition: '0.2s', hover: { backgroundColor: 'var(--primary-color)', color: 'white' } }}
+                              className="mt-3 px-5 py-2 bg-gradient-to-r from-orange-400 to-[#f47920] hover:from-[#f47920] hover:to-[#e06714] text-white text-xs font-bold rounded-lg shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all duration-300 border-none flex items-center justify-center gap-1.5"
                             >
-                              Viết đánh giá
+                              <Star size={14} className="fill-white" /> Viết Đánh Giá
                             </button>
                           </div>
                         )}
