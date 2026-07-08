@@ -217,6 +217,7 @@ function ProductDetail() {
           return;
         }
         existing.quantity += qty;
+        existing.stock = currentStock;
       } else {
         cart.push({
           id: product.id,
@@ -225,7 +226,8 @@ function ProductDetail() {
           thumbnail: product.imageUrl || '/racket_product_1.png',
           brand: brand,
           quantity: qty,
-          details: details
+          details: details,
+          stock: currentStock
         });
       }
       

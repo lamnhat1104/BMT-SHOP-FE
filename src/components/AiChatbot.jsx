@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { aiApi } from '../api/ai';
+import { Link } from 'react-router-dom';
 
 function AiChatbot({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
@@ -30,8 +31,12 @@ function AiChatbot({ isOpen, onClose }) {
 
     try {
       const res = await aiApi.chat(userMessage);
-      if (res) {
-        setMessages(prev => [...prev, { role: 'ai', content: res }]);
+      if (res && res.response) {
+        setMessages(prev => [...prev, {
+          role: 'ai',
+          content: res.response,
+          relatedProducts: res.related_products || []
+        }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', content: 'Xin lỗi, tôi không thể trả lời lúc này.' }]);
       }
@@ -51,7 +56,7 @@ function AiChatbot({ isOpen, onClose }) {
         <div className="ai-chatbot-title">
           <span className="ai-icon">🤖</span> Trợ lý AI BMT-SHOP
         </div>
-        <button className="ai-chatbot-close" onClick={onClose}>×</button>
+        <button className="ai-chatbot-close" onClick={onClose}>Đóng</button>
       </div>
       
       <div className="ai-chatbot-messages">
@@ -59,6 +64,31 @@ function AiChatbot({ isOpen, onClose }) {
           <div key={idx} className={`ai-message-wrapper ${msg.role}`}>
             <div className={`ai-message ${msg.role}`}>
               {msg.content}
+              {msg.relatedProducts && msg.relatedProducts.length > 0 && (
+                <div className="ai-related-products">
+                  {msg.relatedProducts.map((product) => (
+                    <Link
+                      key={product.id}
+                      className="ai-related-product"
+                      to={product.link}
+                    >
+                      {product.image_url && (
+                        <img src={product.image_url} alt={product.title} />
+                      )}
+                      <div className="ai-related-product-info">
+                        <strong>{product.title}</strong>
+                        <span>{product.brand || 'BMT Shop'}</span>
+                        {product.price != null && (
+                          <b>{Number(product.price).toLocaleString('vi-VN')} đ</b>
+                        )}
+                        {product.stock != null && (
+                          <small>Kho: {product.stock}</small>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -92,6 +122,7 @@ function AiChatbot({ isOpen, onClose }) {
           right: 30px;
           width: 350px;
           height: 500px;
+          max-height: calc(100vh - 120px); /* Đảm bảo không bị che khuất trên màn hình thấp */
           background: white;
           border-radius: 12px;
           box-shadow: 0 5px 25px rgba(0,0,0,0.2);
@@ -103,6 +134,7 @@ function AiChatbot({ isOpen, onClose }) {
         }
 
         .ai-chatbot-header {
+          flex-shrink: 0;
           background: #0068FF;
           color: white;
           padding: 15px;
@@ -113,12 +145,19 @@ function AiChatbot({ isOpen, onClose }) {
         }
 
         .ai-chatbot-close {
-          background: none;
+          background: rgba(255, 255, 255, 0.2);
           border: none;
           color: white;
-          font-size: 24px;
+          font-size: 14px;
+          font-weight: bold;
           cursor: pointer;
-          line-height: 1;
+          padding: 6px 12px;
+          border-radius: 15px;
+          transition: background 0.2s ease;
+        }
+        
+        .ai-chatbot-close:hover {
+          background: rgba(255, 255, 255, 0.4);
         }
 
         .ai-chatbot-messages {
@@ -160,7 +199,53 @@ function AiChatbot({ isOpen, onClose }) {
           border-bottom-left-radius: 5px;
         }
 
+        .ai-related-products {
+          margin-top: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .ai-related-product {
+          display: flex;
+          gap: 8px;
+          padding: 8px;
+          color: inherit;
+          text-decoration: none;
+          background: white;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+        }
+
+        .ai-related-product img {
+          width: 52px;
+          height: 52px;
+          object-fit: cover;
+          border-radius: 6px;
+          flex: 0 0 auto;
+        }
+
+        .ai-related-product-info {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .ai-related-product-info strong,
+        .ai-related-product-info span,
+        .ai-related-product-info b,
+        .ai-related-product-info small {
+          overflow-wrap: anywhere;
+        }
+
+        .ai-related-product-info span,
+        .ai-related-product-info small {
+          color: #666;
+        }
+
         .ai-chatbot-input-area {
+          flex-shrink: 0;
           display: flex;
           padding: 15px;
           border-top: 1px solid #ddd;
